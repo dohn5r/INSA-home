@@ -151,7 +151,8 @@ dailyDiary <- multidata.read(data.path="DATA/Survey Sparrows",idChar=c(5,7),grou
 Then, we read the **demos** dataset, including *demographic variables* (N = 107) that were recorded in the demographics.csv data file.
 ```{r }
 # Demographics - demos (107 participants)
-demos <- read.csv2("DATA/demographics.csv",header=TRUE) # csv2 because saved with ; as column separator
+
+demos <- load("/Users/dohn5r/Documents/INSA-home/Appendix D - Data/demosFINAL.RData") # csv2 because saved with ; as column separator
 ```
 
 <br>
@@ -180,7 +181,7 @@ str(HR.1min)
 str(dailyDiary)
 
 # demos
-str(demos)
+#str(demos)
 ```
 
 <br>
@@ -465,8 +466,11 @@ nrow(sleepLog) - nlevels(sleepLog$LogId) # only one LogId is included twice
 sleepLog[sleepLog$LogId==names(summary(sleepLog$LogId)[which(summary(sleepLog$LogId)==2)]),] # showing LogId
 
 # removing dupicated LogId with SleepDataType = "stages"
-sleepLog <- sleepLog[!(sleepLog$LogId==names(summary(sleepLog$LogId)[which(summary(sleepLog$LogId)==2)]) &
+if (sum(summary(sleepLog$LogId)==2) > 0){
+  sleepLog <- sleepLog[!(sleepLog$LogId==names(summary(sleepLog$LogId)[which(summary(sleepLog$LogId)==2)]) &
                          sleepLog$SleepDataType=="stages"),]
+}
+
 cat("sanity check:",nlevels(as.factor(as.character(sleepLog$LogId)))==nrow(sleepLog)) # now each row has its own identifier
 ```
 
@@ -1017,11 +1021,11 @@ sleepLog.new[sleepLog.new$IDday%in%levels(as.factor(as.character(dupl))),
 - in 57 cases (1%), there are two observations with the same `ID` and `ActivityDate` value
 
 - the inspection of these cases suggest that all of them are short early-evening naps (mostly `SleepDataType` = "classic") followed by longer nocturnal sleep periods (mostly `SleepDataType` = "stages"), and thus, only the latter is kept for the analyses.
-```{r message=FALSE,warning=FALSE,fig.height=4,fig.width=10}
+```{r message=FALSE,warning=FALSE,fig.height=4,fig.width=10,error = T}
 dupl <- sleepLog.new[sleepLog.new$IDday%in%levels(as.factor(as.character(dupl))),]
 
 # shortNaps (mostly "classic")
-(shortNaps <- dupl[seq(1,nrow(dupl)-1,2),])
+(shortNaps <- dupl[seq(1,nrow(dupl)- 1,2),])
 summary(as.numeric(difftime(shortNaps$EndTime,shortNaps$StartTime,units="hours")))
 
 # longSleeps (mostly "stages")
@@ -1038,7 +1042,7 @@ hist(longSleeps$StartHour,main="StartHour longSleeps",breaks=40,col="gray",xlab=
 <br>
 
 Here, we **remove the 57 cases** of early-evening naps recorded before the subsequent nocturnal sleep periods. Thus, now there are no further cases with the same `ID` and `ActivityDate` value.
-```{r message=FALSE,warning=FALSE,fig.height=4,fig.width=10}
+```{r message=FALSE,warning=FALSE,fig.height=4,fig.width=10,error=T}
 # removing 57 cases of early-evening naps
 memory_sleepLog.new <- sleepLog.new
 sleepLog.new <- sleepLog.new[!(sleepLog.new$LogId%in%levels(as.factor(as.character(shortNaps$LogId)))),]
@@ -2095,7 +2099,7 @@ load("DATA/datasets/sleepEBE_timeProcessed2.RData") # sleepEBE
 load("DATA/datasets/classicEBE_timeProcessed.RData") # classicEBE
 load("DATA/datasets/HR.1min_timeProcessed.RData") # HR.1min
 load("DATA/datasets/dailyDiary_timeProcessed.RData") # dailyDiary
-demos <- read.csv2("DATA/demographics.csv",header=TRUE) # demos
+#demos <- read.csv2("DATA/demographics.csv",header=TRUE) # demos
 ```
 
 <br>
