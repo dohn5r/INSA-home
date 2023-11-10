@@ -124,6 +124,7 @@ multidata.read <- function(data.path,idChar,groupChar=NA,nSubj=NA,surveySparrow=
 </p></details>
 
 ```{r }
+library(dplyr)
 # Fitbit - dailyAct (6,019 days from 93 participants)
 dailyAct <- multidata.read(data.path="DATA/Fitbit All Daily Activity",idChar=c(5,7),groupChar=c(8,11),nSubj=93)
 
@@ -137,7 +138,7 @@ sleepLog <- multidata.read(data.path="DATA/Fitbit Sleep Log",idChar=c(5,7),group
 sleepEBE <- multidata.read(data.path="DATA/Fitbit Sleep Stages (30sec)",idChar=c(5,7),groupChar=c(8,11),nSubj=93)
 
 # Fitbit - classicEBE (2,505,034 epochs from 93 participants)
-classicEBE <- multidata.read(data.path="DATA/Fitbit Sleep Classic (1min)",idChar=c(5,7),groupChar=c(8,11),nSubj=93)
+classicEBE <- multidata.read(data.path="DATA/Fitbit Sleep Classic (1min)",idChar=c(5,7),groupChar=c(8,11),nSubj=93) 
 
 # Fitbit - HR.1min (6,986,307 epochs from 93 participants)
 HR.1min <- multidata.read(data.path="DATA/Fitbit HR (1min)",idChar=c(5,7),groupChar=c(8,11),nSubj=93)
@@ -152,7 +153,7 @@ Then, we read the **demos** dataset, including *demographic variables* (N = 107)
 ```{r }
 # Demographics - demos (107 participants)
 
-demos <- load("/Users/dohn5r/Documents/INSA-home/Appendix D - Data/demosFINAL.RData") # csv2 because saved with ; as column separator
+demos <<- load("/Users/dohn5r/Documents/INSA-home/Appendix D - Data/demosFINAL.RData") # csv2 because saved with ; as column separator
 ```
 
 <br>
@@ -181,7 +182,7 @@ str(HR.1min)
 str(dailyDiary)
 
 # demos
-#str(demos)
+str(demos)
 ```
 
 <br>
@@ -1012,6 +1013,12 @@ nrow(sleepLog.new[duplicated(sleepLog.new$IDday),]) # 57
 dupl <- sleepLog.new[duplicated(sleepLog.new$IDday),"IDday"]
 sleepLog.new[sleepLog.new$IDday%in%levels(as.factor(as.character(dupl))),
              c("ID","LogId","ActivityDate","StartTime","EndTime","SleepDataType")]
+
+shortNaps_eval = F
+if (length(dupl) > 0){
+  shortNaps_eval = T
+}
+
 ```
 
 <br>
@@ -1021,7 +1028,7 @@ sleepLog.new[sleepLog.new$IDday%in%levels(as.factor(as.character(dupl))),
 - in 57 cases (1%), there are two observations with the same `ID` and `ActivityDate` value
 
 - the inspection of these cases suggest that all of them are short early-evening naps (mostly `SleepDataType` = "classic") followed by longer nocturnal sleep periods (mostly `SleepDataType` = "stages"), and thus, only the latter is kept for the analyses.
-```{r message=FALSE,warning=FALSE,fig.height=4,fig.width=10,error = T}
+```{r eval = shortNaps_eval, message=FALSE,warning=FALSE,fig.height=4,fig.width=10}
 dupl <- sleepLog.new[sleepLog.new$IDday%in%levels(as.factor(as.character(dupl))),]
 
 # shortNaps (mostly "classic")
@@ -1042,7 +1049,7 @@ hist(longSleeps$StartHour,main="StartHour longSleeps",breaks=40,col="gray",xlab=
 <br>
 
 Here, we **remove the 57 cases** of early-evening naps recorded before the subsequent nocturnal sleep periods. Thus, now there are no further cases with the same `ID` and `ActivityDate` value.
-```{r message=FALSE,warning=FALSE,fig.height=4,fig.width=10,error=T}
+```{r eval = shortNaps_eval, message=FALSE,warning=FALSE,fig.height=4,fig.width=10,error=T}
 # removing 57 cases of early-evening naps
 memory_sleepLog.new <- sleepLog.new
 sleepLog.new <- sleepLog.new[!(sleepLog.new$LogId%in%levels(as.factor(as.character(shortNaps$LogId)))),]
@@ -1058,7 +1065,7 @@ cat("excluded",nrow(memory_sleepLog.new)-nrow(sleepLog.new),"cases of early-even
 In the San Francisco area, the **Daylight Saving Time** (DST) changed on March 10th (1h forward) and November 3rd, 2019 (1h backward), and again on March 8th (1h forward) and November 1st, 2020 (1h backward), and finally on March 14th, 2021. Here, we inspect the distributions of *StartHour* values in the 5 days preceding and the 5 days following each of these dates, in order to check whether time was automatically updated by the wristband.
 ```{r fig.width=12,fig.height=4}
 # setting DST changing times
-DST.changes <- as.Date(c("2019-03-10","2019-11-03","2020-03-08","2020-11-01","2021-03-14"))
+DST.changes <- as.Date(c("2021-03-14","2021-11-07", "2022-03-13","2022-11-06","2023-03-12","2023-11-05"))
 
 # selecting cases with ActivityDate = DST.changes + or - 5 days
 DST <- as.data.frame(matrix(nrow=0,ncol=4))
@@ -1216,7 +1223,7 @@ nrow(sleepEBE[sleepEBE$LogId=="24433907842",])/2/60
 Here, we inspect EBE `Time` values in those epochs immediately preceding or following the DST changes highlighted in section 2.3.5. Note that DST times in the San Francisco area always changed at 2 AM
 ```{r fig.width=12,fig.height=4}
 # setting DST changing times
-DST.changes <- as.POSIXct(paste(c("2019-03-10","2019-11-03","2020-03-08","2020-11-01","2021-03-14"),
+DST.changes <- as.POSIXct(paste(c("2021-03-14","2021-11-07", "2022-03-13","2022-11-06","2023-03-12","2023-11-05"),
                                 "02:00:00",sep=" "))
 
 # selecting cases with ActivityDate = DST.changes + or - 1 minute
@@ -1283,7 +1290,7 @@ sleepEBE[which(rownames(sleepEBE)%in%as.character(2714654:2714660)),c("ID","LogI
 
 *Comments:*
 
-- only in one case (`LogId` = 26201445747) there are two consecutive epochs separated by more than 60 seconds, namely 1 hour, and this case is observed precisely on **March 8th, 2020** (DST change)
+- only in one case (`LogId` = 39430330016) there are two consecutive epochs separated by more than 60 seconds, namely 1 hour, and this case is observed precisely on **March 8th, 2020** (DST change)
 
 - nevertheless, no other 'holes' are observed in corrispondence of DST changes, coherently with our conclusions in the section above
 
@@ -1312,7 +1319,7 @@ checkTimeContinuity(data=sleepEBE,temporalDiff=30)
 
 - all cases were effectively corrected
 
-- now, no more cases have one or more couples of consecutive epochs differing more than 30 sec, with the only exception of *SleepLog* 26201445747 (see section 2.5.3)
+- now, no more cases have one or more couples of consecutive epochs differing more than 30 sec, with the only exception of *SleepLog* 39430330016 (see section 2.5.3)
 
 <br>
 
@@ -1358,6 +1365,7 @@ colnames(classicEBE)[colnames(classicEBE)=="logId"] <- "LogId"
 p <- timeCheck(data=classicEBE,ID="ID",day="ActivityDate",hour="Time",
                input.dayFormat="%m/%d/%Y",output.dayFormat="%Y-%m-%d",output.hourFormat="%m/%d/%Y %H:%M",
                day.withinNight=TRUE,LogId="LogId")
+
 ```
 
 <br>
@@ -1472,19 +1480,21 @@ sleepLog[sleepLog$LogId%in%uniqueLogId,c("ID","LogId","ActivityDate","StartTime"
 Those cases **only included in `sleepEBE` but not in `sleepLog` (N = 41)** will be processed separately based on the number of epochs included in `sleepEBE.` Note that these are all cases of nocturnal sleep with `TIB` between 5.7 and 11.25 hours.
 ```{r warning=FALSE}
 # summarizing TIB and StartTime of 41 cases only included in sleepEBE data
-uniqueEBElogs <- levels(sleepEBE$LogId)[!levels(sleepEBE$LogId)%in%levels(sleepLog_noncomb$LogId)]
+uniqueEBElogs <- levels(sleepEBE$LogId)[!levels(sleepEBE$LogId) %in% levels(sleepLog_noncomb$LogId)]
 length(uniqueEBElogs)
 n <- nrow(sleepEBE[sleepEBE$LogId==uniqueEBElogs[1],])
 start <- head(sleepEBE[sleepEBE$LogId==uniqueEBElogs[1],"Time"],1)
-for(i in 2:length(uniqueEBElogs)){ 
-  n <- c(n,nrow(sleepEBE[sleepEBE$LogId==uniqueEBElogs[i],]))
-  start <- c(start,head(sleepEBE[sleepEBE$LogId==uniqueEBElogs[i],"Time"],1))}
-StartHour <- as.POSIXct(paste(lubridate::hour(start),lubridate::minute(start)),format="%H %M",tz="GMT")
+if(length(uniqueEBElogs) > 0){
+  for(i in 2:length(uniqueEBElogs)){ 
+    n <- c(n,nrow(sleepEBE[sleepEBE$LogId==uniqueEBElogs[i],]))
+    start <- c(start,head(sleepEBE[sleepEBE$LogId==uniqueEBElogs[i],"Time"],1))}
+  StartHour <- as.POSIXct(paste(lubridate::hour(start),lubridate::minute(start)),format="%H %M",tz="GMT")
 
-# plotting
-par(mfrow=c(2,1))
-hist(n/2/60,breaks=35,col="black",main="TIB (hours) in uniqueEBElogs")
-hist(StartHour,breaks=35,col="black",xlab="",main="StartTime in uniqueEBElogs")
+  # plotting
+  par(mfrow=c(2,1))
+  hist(n/2/60,breaks=35,col="black",main="TIB (hours) in uniqueEBElogs")
+  hist(StartHour,breaks=35,col="black",xlab="",main="StartTime in uniqueEBElogs")
+}
 ```
 
 <br>
@@ -1534,17 +1544,19 @@ hist(sleepLog_noncomb[sleepLog_noncomb$LogId%in%ClassicAndSleepLog,"StartHour"],
 Here, we inspect EBE `Time` values in those epochs immediately preceding or following the DST changes highlighted in section 2.3.5. Note that DST times in the San Francisco area always changed at 2 AM
 ```{r fig.width=12,fig.height=4}
 # setting DST changing times
-DST.changes <- as.POSIXct(paste(c("2019-03-10","2019-11-03","2020-03-08","2020-11-01","2021-03-14"),
-                                "02:00:00",sep=" "),tz="GMT")
+DST.changes <- as.POSIXct(paste(c("2021-03-14","2021-11-07", "2022-03-13","2022-11-06","2023-03-12","2023-11-05"),sep=" "),tz="GMT")
 
 # selecting cases with ActivityDate = DST.changes + or - 2 minutes
 DST <- as.data.frame(matrix(nrow=0,ncol=2))
 for(i in 1:length(DST.changes)){
   DST <- rbind(DST,classicEBE[difftime(classicEBE$Time,DST.changes[i],units="mins")>(-2) &
                               difftime(classicEBE$Time,DST.changes[i],units="mins")<2,c("ID","Time","LogId")])}
-DST$DST <- FALSE # marking DST time changes with DST = TRUE
-DST[DST$Time%in%DST.changes,"DST"] <- TRUE
-DST[order(DST$ID,DST$Time),]
+
+if(nrow(DST) > 0){
+  DST$DST <- FALSE # marking DST time changes with DST = TRUE
+  DST[DST$Time%in%DST.changes,"DST"] <- TRUE
+  DST[order(DST$ID,DST$Time),]
+}
 ```
 
 <br>
@@ -1560,9 +1572,9 @@ DST[order(DST$ID,DST$Time),]
 ### 2.5.4. Temporal continuity
 
 The temporal continuity discussed above can be also inspected throughout the whole `sleepEBE` dataset, by counting the No. of consecutive epochs within the same `LogId` value whose `StartTime` values differ by more than 60 sec (i.e., 30 sec as expected + further 30 due to issues related to time rounding).
-```{r warning=FALSE,message=FALSE}
+```{r message=FALSE, warning=FALSE}
 # sorting sleepEBE by ID, LogId, and Time
-classicEBE <- classicEBE[order(classicEBE$ID,classicEBE$ActivityDate,classicEBE$Time),]
+classicEBE <- classicEBE[order(classicEBE$ID,classicEBE$ActivityDate,classicEBE$Time, classicEBE$LogId),]
 
 # checking temporal continuity
 checkTimeContinuity(data=classicEBE,temporalDiff=60)
@@ -1572,20 +1584,20 @@ checkTimeContinuity(data=classicEBE,temporalDiff=60)
 
 *Comments:*
 
-- none of the cases shows time shifts longer than 60 secs, including case `LogId` = 26201445747, which showed a shift of 1 hour between 7:59 and 9:00 in sleep EBE data
+- none of the cases shows time shifts longer than 60 secs, including case `LogId` = 39430330016, which showed a shift of 1 hour between 7:59 and 9:00 in sleep EBE data
 
 <br>
 
 Here, we better inspect `sleepLog`, `sleepEBE`, and `classicEBE` times for this case. 
 ```{r warning=FALSE,message=FALSE}
-# computing and showing sleep times for LogId 26201445747
+# computing and showing sleep times for LogId 39430330016
 times <- data.frame(dataType=c("LogId","sleepEBE","classicEBE"),
-           start=c(sleepLog[sleepLog$LogId=="26201445747","StartTime"],head(sleepEBE[sleepEBE$LogId=="26201445747","Time"],1),
-                   head(classicEBE[classicEBE$LogId=="26201445747","Time"],1)),
-           end=c(sleepLog[sleepLog$LogId=="26201445747","EndTime"],tail(sleepEBE[sleepEBE$LogId=="26201445747","Time"],1),
-                 tail(classicEBE[classicEBE$LogId=="26201445747","Time"],1)),
-           duration=c(sleepLog[sleepLog$LogId=="26201445747","TimeInBed"],nrow(sleepEBE[sleepEBE$LogId=="26201445747",])/2,
-                      nrow(classicEBE[classicEBE$LogId=="26201445747",])))
+           start=c(sleepLog[sleepLog$LogId=="39430330016","StartTime"],head(sleepEBE[sleepEBE$LogId=="39430330016","Time"],1),
+                   head(classicEBE[classicEBE$LogId=="39430330016","Time"],1)),
+           end=c(sleepLog[sleepLog$LogId=="39430330016","EndTime"],tail(sleepEBE[sleepEBE$LogId=="39430330016","Time"],1),
+                 tail(classicEBE[classicEBE$LogId=="39430330016","Time"],1)),
+           duration=c(sleepLog[sleepLog$LogId=="39430330016","TimeInBed"],nrow(sleepEBE[sleepEBE$LogId=="39430330016",])/2,
+                      nrow(classicEBE[classicEBE$LogId=="39430330016",])))
 times$timeDiff <- difftime(times$end,times$start,units="mins")
 times
 ```
@@ -1600,11 +1612,11 @@ times
 
 <br>
 
-Here, we discard `LogId` 26201445747 epochs from `sleepEBE`.
+Here, we discard `LogId` 39430330016 epochs from `sleepEBE`.
 ```{r warning=FALSE,message=FALSE}
-sleepEBE <- sleepEBE[sleepEBE$LogId!="26201445747",] # removing case from sleepEBE
+sleepEBE <- sleepEBE[sleepEBE$LogId!="39430330016",] # removing case from sleepEBE
 sleepEBE$LogId <- as.factor(as.character(sleepEBE$LogId)) # resetting LogIds
-ClassicAndSleepLog <- c(ClassicAndSleepLog,"26201445747")
+ClassicAndSleepLog <- c(ClassicAndSleepLog,"39430330016")
 ```
 
 <br>
@@ -1691,8 +1703,7 @@ Here, we inspect EBE `Time` values in those epochs immediately preceding or foll
 ```{r fig.width=12,fig.height=4}
 HR.1min <- p[order(p$ID,HR.1min$Time),]
 # setting DST changing times
-DST.changes <- as.POSIXct(paste(c("2019-03-10","2019-11-03","2020-03-08","2020-11-01","2021-03-14"),
-                                "02:00:00",sep=" "),tz="GMT")
+DST.changes <- as.POSIXct(paste(c("2021-03-14","2021-11-07", "2022-03-13","2022-11-06","2023-03-12","2023-11-05"),sep=" "),tz="GMT")
 
 # selecting cases with ActivityDate = DST.changes + or - 3 minutes
 DST <- as.data.frame(matrix(nrow=0,ncol=2))
@@ -1778,7 +1789,7 @@ save(HR.1min,file="DATA/datasets/HR.1min_timeProcessed.RData")
 ## 2.7. dailyDiary
 
 `dailyDiary` data were recorded with Survey Sparrow (SurveySparrow Inc.), and include the daily diary reports on psychological distress and other psychosocial variables self-reported each evening by participants. dailyDiary data are stored in a dataset with one row per day, with the `StartedTime` and `SubmittedTime` variables indicating the survey start and submission time, respectively. Thus, in this dataset we only need to recode the `StartedTime` variable, based on which the .
-```{r message=FALSE}
+```{r message=FALSE, error = T}
 # recoding day and hour, and checking time and missing data points
 dailyDiary <-  timeCheck(data=dailyDiary,ID="ID",day="ActivityDate",hour="StartedTime",
                          input.dayFormat="%m/%d/%Y",output.dayFormat="%Y-%m-%d",output.hourFormat="%m/%d/%Y %H:%M")
@@ -1803,7 +1814,7 @@ dailyDiary$SubmittedTime <- subTime$SubmittedTime
 - **43 cases** have the same participants identifier and temporal coordinate
 
 - the overall No. of days is lower than that shown by `sleepLog` data, although the No. (substantial) of missing days and consecutive missing days is also lower than with that shown for `sleepLog`. Specifically, despite the **substantial No. of missing days** (i.e., 78% with 10+ missing days vs. 76% of sleepLog), the number of consecutive missing days is lower, with only three participants (s052) showing 10+ consecutive missing days. This and other cases will be better discussed in the [data cleaning](#datacleaning) section.
-```{r message=FALSE,fig.width=10,fig.height=4}
+```{r message=FALSE,fig.width=10,fig.height=4,error = T}
 (dailyDiary_compliance <-  
   timeCheck(data=dailyDiary,ID="ID",day="ActivityDate",hour="StartedTime",returnInfo=TRUE,printInfo=FALSE,
             input.dayFormat="%m/%d/%Y",output.dayFormat="%Y-%m-%d",output.hourFormat="%m/%d/%Y %H:%M"))
@@ -1819,7 +1830,7 @@ hist(dailyDiary_compliance$maxdayDiff,main="Max No. of consecutive missing days"
 ### 2.7.1. Duplicated responses
 
 First, we better inspect the **43 duplicated responses** observed above.
-```{r message=FALSE,fig.width=10,fig.height=4}
+```{r message=FALSE,fig.width=10,fig.height=4, error = T}
 dailyDiary$IDhour <- as.factor(paste(dailyDiary$ID,dailyDiary$StartedTime,sep="_"))
 dup <- dailyDiary[duplicated(dailyDiary$IDhour),c("ID","ActivityDate","StartedTime","IDhour")]
 cat("Detected",nrow(dup),"cases of double responses recorded between",
@@ -1859,7 +1870,7 @@ dailyDiary <- new.data
 ### 2.7.2. CompletionStatus
 
 Then, we inspect the `CompletionStatus` variable looking for cases of `"Partial Completion"`.
-```{r message=FALSE,fig.width=10,fig.height=4}
+```{r message=FALSE,fig.width=10,fig.height=4, error = T}
 # printing info
 cat(nrow(dailyDiary[is.na(dailyDiary$SubmittedTime),]),"cases with missing SubmittedTime and",
     nrow(dailyDiary[dailyDiary$CompletionStatus=="Partially Completed",]),"cases of Partial Completion")
@@ -1881,7 +1892,7 @@ dailyDiary[dailyDiary$CompletionStatus=="Partially Completed",
 
 ### 2.7.3. surveyDuration
 
-```{r message=FALSE,fig.width=10,fig.height=4}
+```{r message=FALSE,fig.width=10,fig.height=4, error = T}
 # creating and plotting surveyDuration (min)
 dailyDiary$surveyDuration <- as.numeric(difftime(dailyDiary$SubmittedTime,dailyDiary$StartedTime,units="min"))
 
@@ -1905,7 +1916,7 @@ barplot(prop.table(table(dailyDiary$surveyDuration)),col="black",xlab="",main="S
 <br>
 
 Here, we **exclude these 6 cases** because we don’t know if the ratings were referred to the current or the following day.
-```{r message=FALSE,fig.width=10,fig.height=4}
+```{r message=FALSE,fig.width=10,fig.height=4, error = T}
 # summary of surveyDuration
 summary(as.factor(dailyDiary$surveyDuration))
 
@@ -1938,7 +1949,7 @@ dailyDiary <- StartTime_rec(data=dailyDiary,start="StartedTime",end="SubmittedTi
 ### 2.7.5. Updating ActivityDate
 
 Then, we update the `ActivityDate` variable so that it indicates the previous day when the `StartTime` is **between 00:00 and 06:00** (N = 1,848, 36%). This allows better clarifying the distinction between consecutive daily reports.
-```{r }
+```{r , error = T}
 # No. of surveys started between 00 and 20
 h00 <- as.POSIXct(paste(substr(Sys.time(),1,10),"00:00:00"),tz="GMT")
 h20 <- as.POSIXct(paste(substr(Sys.time(),1,10),"20:00:00"),tz="GMT")
@@ -1953,7 +1964,7 @@ dailyDiary[dailyDiary$StartHour >= h00 & dailyDiary$StartHour <= h20,"ActivityDa
 <br>
 
 We can use the updated `ActivityDate` variable to check for **double cases** with the same `ID` and `ActivityDate` value.
-```{r }
+```{r , error = T}
 # No. of duplicates IDday before updatingActivityDate
 nrow(dailyDiary[duplicated(dailyDiary$IDday),]) # 788
 
@@ -1997,7 +2008,7 @@ cat("Detected",nrow(dailyDiary)-nlevels(dailyDiary$IDday),"cases of double respo
 <br>
 
 We can also use the updated `ActivityDate` to check the No. of cases with **`StartedTime` after `sleepLog` `EndTime` (N = 739)** (i.e., surveys answered on the following day), and the differences between the two time points (ranging from 0.5 min to 15.8h)
-```{r warning=FALSE,message=FALSE}
+```{r warning=FALSE,message=FALSE, error = T}
 # checking No. of cases with StartedTime after wake up time (739)
 dailyDiary$IDday <- as.factor(paste(dailyDiary$ID,dailyDiary$ActivityDate,sep="_"))
 diaryAndsleep <- na.omit(plyr::join(dailyDiary[,c("IDday","StartedTime")],sleepLog[,c("IDday","EndTime")],by="IDday",type="left"))
@@ -2016,9 +2027,9 @@ summary(as.numeric(difftime(diaryAndsleep[diaryAndsleep$StartedTime>diaryAndslee
 ### 2.7.6. Daylight Saving Time
 
 In the San Francisco area, the **Daylight Saving Time** (DST) changed on March 10th (1h forward) and November 3rd, 2019 (1h backward), and again on March 8th (1h forward) and November 1st, 2020 (1h backward), and finally on March 14th, 2021. Here, we inspect the distributions of `StartHour` values in the 5 days preceding and the 5 days following each of these dates, in order to check whether time was automatically updated by the wristband.
-```{r fig.width=12,fig.height=4}
+```{r fig.width=12,fig.height=4, error = T}
 # setting DST changing times
-DST.changes <- as.Date(c("2019-03-10","2019-11-03","2020-03-08","2020-11-01","2021-03-14"))
+DST.changes <- as.Date(c("2021-03-14","2021-11-07", "2022-03-13","2022-11-06","2023-03-12","2023-11-05"))
 
 # selecting cases with ActivityDate = DST.changes + or - 5 days
 DST <- as.data.frame(matrix(nrow=0,ncol=4))
@@ -2059,7 +2070,7 @@ for(i in 1:length(DST.changes)){
 ### 2.7.7. Temporal continuity
 
 Finally, we plot epochs order against `Time` for each participant in order to better inspect the pattern of missing data.
-```{r message=FALSE,error=FALSE,fig.width=10,fig.height=10}
+```{r message=FALSE,error=FALSE,fig.width=10,fig.height=10, error = T}
 par(mfrow=c(3,3))
 for(ID in levels(dailyDiary$ID)){ 
   plot((1:nrow(dailyDiary[dailyDiary$ID==ID,])~dailyDiary[dailyDiary$ID==ID,"StartedTime"]),main=ID,xlab="",ylab="") }
@@ -2085,7 +2096,7 @@ save(dailyDiary,file="DATA/datasets/dailyDiary_timeProcessed.RData")
 # 3. Data recoding
 
 Here, we **remove the variables not considered for the analysis**, and we **recode** those variables that are kept. Before recoding, we empty the working environment and reload the processed datsets.
-```{r }
+```{r}
 rm(list=ls()) # emptying the working environment
 
 # setting system time zone to GMT (for consistent temporal synchronization)
@@ -2099,7 +2110,6 @@ load("DATA/datasets/sleepEBE_timeProcessed2.RData") # sleepEBE
 load("DATA/datasets/classicEBE_timeProcessed.RData") # classicEBE
 load("DATA/datasets/HR.1min_timeProcessed.RData") # HR.1min
 load("DATA/datasets/dailyDiary_timeProcessed.RData") # dailyDiary
-#demos <- read.csv2("DATA/demographics.csv",header=TRUE) # demos
 ```
 
 <br>
@@ -2328,7 +2338,7 @@ save(HR.1min,file="DATA/datasets/HR.1min_recoded.RData")
 ## 3.7. dailyDiary
 
 From `dailyDiary`, we only keep the self-reported variables, whereas we remove all variables describing survey or participants' details.
-```{r fig.width=10,fig.height=4}
+```{r fig.width=10,fig.height=4, error = T}
 # removing variables
 toRemove <- c("TotalScore","CompletionStatus","IPAddress","Location","DMSLatLong","ChannelName","ChannelType","DeviceID",
               "DeviceName","Browser","OS",
@@ -2353,7 +2363,7 @@ Then, we recode self-report variables from character to numeric values.
 ### 3.7.1. dailyStress
 
 We start with `dailyStress` (i.e., “How stressful was your day?”), 1 = “Not at all stressful” to 5 = “Extremely stressful”. Only when participants reported dailyStress > 1, they were asked to indicate the sources of stress (yes/no).
-```{r fig.width=10,fig.height=4}
+```{r fig.width=10,fig.height=4 , error = T}
 # converting as dailyStress score as numeric
 dailyDiary$dailyStress <- as.numeric(gsub("Not at all stressful","1",
                                           gsub("Not so stressful","2",
@@ -2414,7 +2424,7 @@ summary(dailyDiary[!is.na(dailyDiary$dailyStress) & dailyDiary$dailyStress>1,
 ### 3.7.2. eveningWorry
 
 The same is done for `eveningWorry` (i.e., "How worried do you feel right now?”), which is recorded from 1 = “Not at all worried” to 5 = “Extremely worried”. Only when participants reported eveningWorry > 1, they were asked to indicate the sources of worry (yes/no)
-```{r fig.width=10,fig.height=4}
+```{r fig.width=10,fig.height=4, error = T}
 # converting eveningWorry score as numeric
 dailyDiary$eveningWorry <- as.numeric(gsub("Not at all worried","1",
                                           gsub("Not so worried","2",
@@ -2475,7 +2485,7 @@ summary(dailyDiary[!is.na(dailyDiary$eveningWorry) & dailyDiary$eveningWorry>1,
 ### 3.7.3. eveningMood
 
 Finally, we recode `eveningMood` (i.e., "How is your mood right now?”) from 1 = “Very bad” to 5 = “Very good”. Here, we can see that the variable was positively skewed, with most of the ratings being 3 (29%) or 4 (36%)
-```{r fig.width=10,fig.height=4}
+```{r fig.width=10,fig.height=4, error = T}
 # converting as numeric
 dailyDiary$eveningMood <- as.numeric(gsub("Very bad","1",
                                           gsub("Somewhat bad","2",
@@ -2492,7 +2502,7 @@ hist(dailyDiary$eveningMood,breaks=50,col="black",xlab="",main="eveningMood (sli
 ### 3.7.4. Saving dataset
 
 Here, we sort the variables, we display the recoded dataset, and we save the recoded `dailyDiary` dataset.
-```{r }
+```{r , error = T }
 # sorting variables
 dailyDiary <- dailyDiary[,c("ID","group","ActivityDate","StartedTime","SubmittedTime","surveyDuration",
                             "dailyStress","eveningWorry","eveningMood",
@@ -2512,21 +2522,23 @@ save(dailyDiary,file="DATA/datasets/dailyDiary_recoded.RData")
 
 From `demos`, we keep the participant's identifier, sex, age, BMI, and insomnia group, with sex and insomnia group being recoded as factor.
 ```{r fig.width=10,fig.height=4}
+demos <- read.csv("/Users/dohn5r/Documents/INSA-home/Appendix B - Data pre-processing/DATA/demographics.csv",header=TRUE) # demos
+
 # recoding participants' identifier
 demos$ID <- as.factor(paste("s",substr(demos$id,5,7),sep=""))
 
 # changing variable classes
 demos$sex <- gsub("0","F",gsub("1","M",demos$sex))
-demos[,c("sex","insomnia","DSMinsomnia","sub_insomnia")] <- 
-  lapply(demos[,c("sex","insomnia","DSMinsomnia","sub_insomnia")],as.factor)
+demos[,c("sex","insomnia","insomnia.group")] <- 
+  lapply(demos[,c("sex","insomnia","insomnia.group")],as.factor)
 demos[,c("age","BMI")] <- lapply(demos[,c("age","BMI")],as.numeric) 
 
 # sorting variables and removing unuseful columns
-demos <- demos[,c("ID","sex","age","BMI","insomnia","DSMinsomnia","sub_insomnia")] # sorting columns
+demos <- demos[,c("ID","sex","age","BMI","insomnia","insomnia.group")] # sorting columns
 
 # plotting variables
 par(mfrow=c(2,3)) 
-for(Var in c(colnames(demos)[2:7])){ 
+for(Var in c(colnames(demos)[2:6])){ 
   if(is.numeric(demos[,Var])){ hist(demos[,Var],main=Var) }else{ plot(demos[,Var],main=Var) }}
 ```
 
@@ -2909,10 +2921,10 @@ ebe2sleep <- function(SLEEPdata=NA,EBEdata=NA,epochLength=30,
   # ..........................................................................................
   if(idBased==FALSE){
     require(tcltk)
-    pb <- tkProgressBar("Computing Sleep metrics:", "%",0, 100, 50) # progress bar
+    #pb <- tkProgressBar("Computing Sleep metrics:", "%",0, 100, 50) # progress bar
     rownames(SLEEPdata) <- 1:nrow(SLEEPdata)
     for(i in 1:nrow(SLEEPdata)){ info <- sprintf("%d%% done", round(which(rownames(SLEEPdata)==i)/nrow(SLEEPdata)*100))
-      setTkProgressBar(pb, round(which(rownames(SLEEPdata)==i)/nrow(SLEEPdata)*100), sprintf("Computing sleep metrics:", info), info)
+      #setTkProgressBar(pb, round(which(rownames(SLEEPdata)==i)/nrow(SLEEPdata)*100), sprintf("Computing sleep metrics:", info), info)
   
       # 3.1.1. Selecting EBE data within SLEEPdata boundaries
       ebe <- EBEdata[EBEdata$ID==SLEEPdata[i,"ID"] & # same ID & bounded between StartTime and EndTime
@@ -3023,7 +3035,7 @@ ebe2sleep <- function(SLEEPdata=NA,EBEdata=NA,epochLength=30,
       
         } else{ # when no epochs are identified in the sleep period -> nEpochs=0, sleep measures = NA
           SLEEPdata[i,"nEpochs"] <- 0 }}
-    close(pb)
+    #close(pb)
     
   } else { 
     # 3.2. based on LogId
@@ -4113,10 +4125,10 @@ HRstage <- function(SLEEPdata=NA,HRdata=NA,EBEdata=NA,digits=3){ require(tcltk)
   
   # 2. iteratively computing mean HR by sleep stage
   # ........................................................................................................................
-  pb <- tkProgressBar("Computing mean HR:", "%",0, 100, 50) # progress bar
+  #pb <- tkProgressBar("Computing mean HR:", "%",0, 100, 50) # progress bar
   for(i in 1:nrow(SLEEPdata)){ 
     info <- sprintf("%d%% done", round(which(rownames(SLEEPdata)==i)/nrow(SLEEPdata)*100))
-    setTkProgressBar(pb, round(which(rownames(SLEEPdata)==i)/nrow(SLEEPdata)*100), sprintf("Computing mean HR:", info), info)
+    #setTkProgressBar(pb, round(which(rownames(SLEEPdata)==i)/nrow(SLEEPdata)*100), sprintf("Computing mean HR:", info), info)
     
     # data selection (between sleepLog StartTime and EndTime)
     HRday <- HRdata[HRdata$ID == SLEEPdata[i,"ID"] &
@@ -4132,7 +4144,7 @@ HRstage <- function(SLEEPdata=NA,HRdata=NA,EBEdata=NA,digits=3){ require(tcltk)
                                               !is.na(ebe$stageHR),]) # No. HR epochs in light sleep
         SLEEPdata[i,"stageHR_REM"] <- round(mean(ebe[ebe$SleepStage==3,"stageHR"],na.rm=TRUE),digits) # REM
         SLEEPdata[i,"nHR_REM"] <- nrow(ebe[ebe$SleepStage==3 & !is.na(ebe$stageHR),]) }}}
-  close(pb) # closing progress bar
+  #close(pb) # closing progress bar
   
   return(SLEEPdata) }
 ```
@@ -5504,10 +5516,10 @@ dayTimeHR <- function(SLEEPACTdata=NA,HRdata=NA){ require(tcltk); require(lubrid
         data.frame(nEpochsdiurnalHR=nrow(HRday),diurnalHR.type="6.to.23",diurnalHR=mean(HRday$HR)) }
   
   # iteratively computing dayTimeHR
-  pb <- tkProgressBar("", "%",0, 100, 50) # progress bar
+  #pb <- tkProgressBar("", "%",0, 100, 50) # progress bar
   for(i in 2:nrow(SLEEPACTdata)){ IDday <- as.character(SLEEPACTdata[i,"IDday"])
     info <- sprintf("%d%% done", round(which(rownames(SLEEPACTdata)==i)/nrow(SLEEPACTdata)*100))
-    setTkProgressBar(pb, round(which(rownames(SLEEPACTdata)==i)/nrow(SLEEPACTdata)*100), sprintf("Computing mean HR...", info), info)
+    #setTkProgressBar(pb, round(which(rownames(SLEEPACTdata)==i)/nrow(SLEEPACTdata)*100), sprintf("Computing mean HR...", info), info)
     diurnalHR.type <- NA
     if(!is.na(SLEEPACTdata[i,"TotalSteps"])){
       
@@ -5537,7 +5549,7 @@ dayTimeHR <- function(SLEEPACTdata=NA,HRdata=NA){ require(tcltk); require(lubrid
       meanHR <- ifelse(nrow(HRday)>0,mean(HRday$HR),NA)
       SLEEPACTdata[i,c("nEpochsdiurnalHR","diurnalHR.type","diurnalHR")] <-
         data.frame(nEpochsdiurnalHR=nrow(HRday),diurnalHR.type=diurnalHR.type,diurnalHR=meanHR) }}
-  close(pb)
+  #close(pb)
   
   return(SLEEPACTdata) }
 ```
