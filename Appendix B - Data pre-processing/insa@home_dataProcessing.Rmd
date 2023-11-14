@@ -90,10 +90,18 @@ multidata.read <- function(data.path,idChar,groupChar=NA,nSubj=NA,surveySparrow=
   paths <- list.files(data.path)
   if (surveySparrow & length(paths) == 1){
     data <- read.csv(paste(data.path,paths[[1]],sep="/"))
-    data <- data %>%
-      dplyr::mutate(ID = record_id,
-                    ID = as.factor(paste("s",substr(record_id,idChar[1],idChar[2]),"_",sep=""))) %>%
-      dplyr::relocate(ID)
+    data <- dplyr::rename_with(data, stringr::str_to_sentence) %>%
+      dplyr::rename_with(~gsub("^X[0-9]+", "", .), everything()) %>%
+      dplyr::rename_with(., ~stringr::str_replace_all(., '\\.', '')) %>%
+      na.omit() %>%
+      dplyr::mutate(ID = Recordid,
+                      ID = as.factor(paste("s",substr(Recordid,idChar[1],idChar[2]),"_",sep=""))) %>%
+      dplyr::relocate(ID) %>%
+      dplyr::select(-c("Recordid")) %>%
+      dplyr::mutate(Startdate = sub("\\..*", "", Startdate),
+                    Enddate = sub("\\..*", "", Enddate)) %>%
+      dplyr::select(-starts_with("Repeat"))
+
   }else{
     # iteratively reading each file and adding it to the same data.frame
     for(path in paths){ 
@@ -243,7 +251,12 @@ timeCheck <- function(data,ID="ID",day="ActivityDate",hour=NA,returnInfo=FALSE,p
     if(is.na(day) | is.null(data$day[1])){ # when hour but not day is specified, day is computed from hour
       data$day <- as.Date( format( as.POSIXct(data$hour,format=input.dayFormat), output.dayFormat)) 
       if(!is.na(hour) & !is.na(LogId) & day.withinNight==TRUE){ # date as the first epoch's date
-        for(LOG in levels(data$LogId)){ data[data$LogId==LOG,"day"] <- data[data$LogId==LOG,"day"][1]}}}}
+        for(LOG in levels(data$LogId)){ 
+          data[data$LogId==LOG,"day"] <- data[data$LogId==LOG,"day"][1]
+        }
+      }
+    }
+    }
   
   # sorting data by participant, day, and time
   if(is.na(hour)){ data <- data[order(data$ID,data$day),]
@@ -1039,7 +1052,7 @@ if (length(dupl) > 0){
 - in 57 cases (1%), there are two observations with the same `ID` and `ActivityDate` value
 
 - the inspection of these cases suggest that all of them are short early-evening naps (mostly `SleepDataType` = "classic") followed by longer nocturnal sleep periods (mostly `SleepDataType` = "stages"), and thus, only the latter is kept for the analyses.
-```{r eval = shortNaps_eval, message=FALSE,warning=FALSE,fig.height=4,fig.width=10, error=T}
+```{r eval = shortNaps_eval, message=FALSE,warning=FALSE,fig.height=4,fig.width=10, error = T}
 dupl <- sleepLog.new[sleepLog.new$IDday%in%levels(as.factor(as.character(dupl))),]
 
 # shortNaps (mostly "classic")
@@ -1060,7 +1073,7 @@ hist(longSleeps$StartHour,main="StartHour longSleeps",breaks=40,col="gray",xlab=
 <br>
 
 Here, we **remove the 57 cases** of early-evening naps recorded before the subsequent nocturnal sleep periods. Thus, now there are no further cases with the same `ID` and `ActivityDate` value.
-```{r eval = shortNaps_eval, message=FALSE,warning=FALSE,fig.height=4,fig.width=10,error=T}
+```{r eval = shortNaps_eval, message=FALSE,warning=FALSE,fig.height=4,fig.width=10,error = T}
 # removing 57 cases of early-evening naps
 memory_sleepLog.new <- sleepLog.new
 sleepLog.new <- sleepLog.new[!(sleepLog.new$LogId%in%levels(as.factor(as.character(shortNaps$LogId)))),]
@@ -1799,17 +1812,15 @@ save(HR.1min,file="DATA/datasets/HR.1min_timeProcessed.RData")
 
 ## 2.7. dailyDiary
 
-`dailyDiary` data were recorded with Survey Sparrow (SurveySparrow Inc.), and include the daily diary reports on psychological distress and other psychosocial variables self-reported each evening by participants. dailyDiary data are stored in a dataset with one row per day, with the `StartedTime` and `SubmittedTime` variables indicating the survey start and submission time, respectively. Thus, in this dataset we only need to recode the `StartedTime` variable, based on which the .
-```{r message=FALSE, error = T}
+`dailyDiary` data were recorded with Survey Sparrow (SurveySparrow Inc.), and include the daily diary reports on psychological distress and other psychosocial variables self-reported each evening by participants. dailyDiary data are stored in a dataset with one row per day, with the `Startdate` and `Enddate` variables indicating the survey start and submission time, respectively. Thus, in this dataset we only need to recode the `Startdate` variable, based on which the .
+```{r message=FALSE, error=F}
 # recoding day and hour, and checking time and missing data points
-dailyDiary <-  timeCheck(data=dailyDiary,ID="ID",day="ActivityDate",hour="StartedTime",
-                         input.dayFormat="%m/%d/%Y",output.dayFormat="%Y-%m-%d",output.hourFormat="%m/%d/%Y %H:%M")
+dailyDiary <-  timeCheck(data=dailyDiary,ID="ID",day="ActivityDate",hour="Startdate",                         input.dayFormat="%Y-%m-%d",output.dayFormat="%Y-%m-%d",output.hourFormat="%Y-%m-%d %H:%M:%S")
 
-# updating SubmittedTime
-subTime <- timeCheck(data=dailyDiary,ID="ID",day="ActivityDate",hour="SubmittedTime",printInfo = FALSE,
-                     input.dayFormat="%m/%d/%Y",output.dayFormat="%Y-%m-%d",output.hourFormat="%m/%d/%Y %H:%M")
-subTime <- subTime[order(subTime$ID,subTime$StartedTime),] # sorting by StartedTime (now sorted by SubmittedTime)
-dailyDiary$SubmittedTime <- subTime$SubmittedTime
+# updating Enddate
+subTime <- timeCheck(data=dailyDiary,ID="ID",day="ActivityDate",hour="Enddate",printInfo = FALSE,input.dayFormat="%Y-%m-%d",output.dayFormat="%Y-%m-%d",output.hourFormat="%Y-%m-%d %H:%M:%S")
+subTime <- subTime[order(subTime$ID,subTime$Startdate),] # sorting by Startdate (now sorted by Enddate)
+dailyDiary$Enddate <- subTime$Enddate
 ```
 
 <br>
@@ -1825,10 +1836,9 @@ dailyDiary$SubmittedTime <- subTime$SubmittedTime
 - **43 cases** have the same participants identifier and temporal coordinate
 
 - the overall No. of days is lower than that shown by `sleepLog` data, although the No. (substantial) of missing days and consecutive missing days is also lower than with that shown for `sleepLog`. Specifically, despite the **substantial No. of missing days** (i.e., 78% with 10+ missing days vs. 76% of sleepLog), the number of consecutive missing days is lower, with only three participants (s052) showing 10+ consecutive missing days. This and other cases will be better discussed in the [data cleaning](#datacleaning) section.
-```{r message=FALSE,fig.width=10,fig.height=4,error = T}
+```{r message=FALSE,fig.width=10,fig.height=4,error=F}
 (dailyDiary_compliance <-  
-  timeCheck(data=dailyDiary,ID="ID",day="ActivityDate",hour="StartedTime",returnInfo=TRUE,printInfo=FALSE,
-            input.dayFormat="%m/%d/%Y",output.dayFormat="%Y-%m-%d",output.hourFormat="%m/%d/%Y %H:%M"))
+  timeCheck(data=dailyDiary,ID="ID",day="ActivityDate",hour="Startdate",returnInfo=TRUE,printInfo=FALSE, input.dayFormat="%Y-%m-%d",output.dayFormat="%Y-%m-%d",output.hourFormat="%Y-%m-%d %H:%M:%S"))
 
 # plotting missing days
 par(mfrow=c(1,2))
@@ -1841,22 +1851,22 @@ hist(dailyDiary_compliance$maxdayDiff,main="Max No. of consecutive missing days"
 ### 2.7.1. Duplicated responses
 
 First, we better inspect the **43 duplicated responses** observed above.
-```{r message=FALSE,fig.width=10,fig.height=4, error = T}
-dailyDiary$IDhour <- as.factor(paste(dailyDiary$ID,dailyDiary$StartedTime,sep="_"))
-dup <- dailyDiary[duplicated(dailyDiary$IDhour),c("ID","ActivityDate","StartedTime","IDhour")]
+```{r message=FALSE,fig.width=10,fig.height=4, error=F}
+dailyDiary$IDhour <- as.factor(paste(dailyDiary$ID,dailyDiary$Startdate,sep="_"))
+dup <- dailyDiary[duplicated(dailyDiary$IDhour),c("ID","ActivityDate","Startdate","IDhour")]
 cat("Detected",nrow(dup),"cases of double responses recorded between",
-    as.character(dup[dup$StartedTime==min(dup$StartedTime),"StartedTime"]),"and",
-    as.character(dup[dup$StartedTime==max(dup$StartedTime),"StartedTime"]))
+    as.character(dup[dup$Startdate==min(dup$Startdate),"Startdate"]),"and",
+    as.character(dup[dup$Startdate==max(dup$Startdate),"Startdate"]))
 
 dailyDiary[dailyDiary$IDhour%in%levels(as.factor(as.character(dup$IDhour))),
-           c("ID","StartedTime","SubmittedTime",colnames(dailyDiary)[c(3,10,11)])]
+           c("ID","Startdate","Enddate",colnames(dailyDiary)[c(3,10,11)])]
 ```
 
 <br>
 
 *Comments:*
 
-- each duplicated case consists of two responses with the **same `StartedTime` and `SubmittedTime` values**
+- each duplicated case consists of two responses with the **same `Startdate` and `Enddate` values**
 
 - critically, although no missing responses are systematically shown by duplicated cases, the **responses are different** within the same couple of duplicated cases
 
@@ -1881,21 +1891,21 @@ dailyDiary <- new.data
 ### 2.7.2. CompletionStatus
 
 Then, we inspect the `CompletionStatus` variable looking for cases of `"Partial Completion"`.
-```{r message=FALSE,fig.width=10,fig.height=4, error = T}
+```{r message=FALSE,fig.width=10,fig.height=4, error=T}
 # printing info
-cat(nrow(dailyDiary[is.na(dailyDiary$SubmittedTime),]),"cases with missing SubmittedTime and",
+cat(nrow(dailyDiary[is.na(dailyDiary$Enddate),]),"cases with missing Enddate and",
     nrow(dailyDiary[dailyDiary$CompletionStatus=="Partially Completed",]),"cases of Partial Completion")
 
 # showing 13 cases of Partial Completion
 dailyDiary[dailyDiary$CompletionStatus=="Partially Completed",
-           c("ID","StartedTime","SubmittedTime","CompletionStatus",colnames(dailyDiary)[c(3,10,11)])]
+           c("ID","Startdate","Enddate","CompletionStatus",colnames(dailyDiary)[c(3,10,11)])]
 ```
 
 <br>
 
 *Comments:*
 
-- in **13 cases** the `CompletionStatus` is `"Partially Completed"`, and the `SubmittedTime` is missing
+- in **13 cases** the `CompletionStatus` is `"Partially Completed"`, and the `Enddate` is missing
 
 - however, all of these cases **does not show missing values** in the focal variables (stress, negative mood, and worry), and thus we keep them by associating the median `surveyDuration` in the sample (see below)
 
@@ -1905,12 +1915,12 @@ dailyDiary[dailyDiary$CompletionStatus=="Partially Completed",
 
 ```{r message=FALSE,fig.width=10,fig.height=4, error = T}
 # creating and plotting surveyDuration (min)
-dailyDiary$surveyDuration <- as.numeric(difftime(dailyDiary$SubmittedTime,dailyDiary$StartedTime,units="min"))
+dailyDiary$surveyDuration <- as.numeric(difftime(dailyDiary$Enddate,dailyDiary$Startdate,units="min"))
 
 # interpolating surveyDuration in cases of Partial Completion
 dailyDiary[dailyDiary$CompletionStatus=="Partially Completed","surveyDuration"] <- median(dailyDiary$surveyDuration,na.rm=TRUE)
-dailyDiary[dailyDiary$CompletionStatus=="Partially Completed","SubmittedTime"] <-
-  dailyDiary[dailyDiary$CompletionStatus=="Partially Completed","StartedTime"] +
+dailyDiary[dailyDiary$CompletionStatus=="Partially Completed","Enddate"] <-
+  dailyDiary[dailyDiary$CompletionStatus=="Partially Completed","Startdate"] +
   dailyDiary[dailyDiary$CompletionStatus=="Partially Completed","surveyDuration"] # interpolating SubmissionTime
 
 barplot(prop.table(table(dailyDiary$surveyDuration)),col="black",xlab="",main="Survey Duration (min)")
@@ -1922,17 +1932,17 @@ barplot(prop.table(table(dailyDiary$surveyDuration)),col="black",xlab="",main="S
 
 - most responses took about 1 min (32%) or less (66%), with only 91 cases (2%) showing a `surveyDuration` > 1 min
 
-- in 17 cases the `surveyDuration` was longer than 15 min, among which **6 cases that submitted the responses more than 16h after the** `StartedTime`*** `
+- in 17 cases the `surveyDuration` was longer than 15 min, among which **6 cases that submitted the responses more than 16h after the** `Startdate`*** `
 
 <br>
 
 Here, we **exclude these 6 cases** because we don’t know if the ratings were referred to the current or the following day.
-```{r message=FALSE,fig.width=10,fig.height=4, error = T}
+```{r message=FALSE,fig.width=10,fig.height=4, error=F}
 # summary of surveyDuration
 summary(as.factor(dailyDiary$surveyDuration))
 
 # durations > 15 min (17)
-dailyDiary[dailyDiary$surveyDuration > 15,c("ID","StartedTime","SubmittedTime","surveyDuration","CompletionStatus")]
+dailyDiary[dailyDiary$surveyDuration > 15,c("ID","Startdate","Enddate","surveyDuration")]
 
 # excluding 6 cases that submitted the responses on the following day
 memory <- dailyDiary
@@ -1944,27 +1954,27 @@ cat("Excluded",nrow(memory)-nrow(dailyDiary),"cases with surveyDuration > 17h")
 
 ### 2.7.4. StartedHour
 
-Then, to better inspect timing and duration of the recorded sleep periods, we recode the `StartedTime` and `SubmittedTime` variables to create `StartHour` and `EndHour`, indicating only the time (and not the date). Note that `StartedTime` and `SubmittedTime` have a minute resolution (not seconds).
+Then, to better inspect timing and duration of the recorded sleep periods, we recode the `Startdate` and `Enddate` variables to create `StartHour` and `EndHour`, indicating only the time (and not the date). Note that `Startdate` and `Enddate` have a minute resolution (not seconds).
 ```{r warning=FALSE,message=FALSE}
-dailyDiary <- StartTime_rec(data=dailyDiary,start="StartedTime",end="SubmittedTime",doPlot=TRUE,returnData=TRUE)
+dailyDiary <- StartTime_rec(data=dailyDiary,start="Startdate",end="Enddate",doPlot=TRUE,returnData=TRUE)
 ```
 
 <br>
 
 *Comments:*
 
-- most diaries were responded between **9 PM** (i.e., 1h after they were received) and **midnight**. Note that most `SartTime` values derived from the Fitabase `sleepLog` data were later than Survey Sparrow `StartedTime`, which looks fine
+- most diaries were responded between **9 PM** (i.e., 1h after they were received) and **midnight**. Note that most `SartTime` values derived from the Fitabase `sleepLog` data were later than Survey Sparrow `Startdate`, which looks fine
 
 <br>
 
 ### 2.7.5. Updating ActivityDate
 
 Then, we update the `ActivityDate` variable so that it indicates the previous day when the `StartTime` is **between 00:00 and 06:00** (N = 1,848, 36%). This allows better clarifying the distinction between consecutive daily reports.
-```{r , error = T}
+```{r , error=F}
 # No. of surveys started between 00 and 20
 h00 <- as.POSIXct(paste(substr(Sys.time(),1,10),"00:00:00"),tz="GMT")
 h20 <- as.POSIXct(paste(substr(Sys.time(),1,10),"20:00:00"),tz="GMT")
-cat(nrow(dailyDiary[dailyDiary$StartHour>=h00 & dailyDiary$StartHour<h20,c("ID","StartedTime","StartHour","ActivityDate")]),
+cat(nrow(dailyDiary[dailyDiary$StartHour>=h00 & dailyDiary$StartHour<h20,c("ID","Startdate","StartHour","ActivityDate")]),
     "cases with StartTime between midnight and 8 PM") ## 1848 cases with StartTime between midnight and 8 PM
 
 # updating ActivityDate
@@ -1975,7 +1985,7 @@ dailyDiary[dailyDiary$StartHour >= h00 & dailyDiary$StartHour <= h20,"ActivityDa
 <br>
 
 We can use the updated `ActivityDate` variable to check for **double cases** with the same `ID` and `ActivityDate` value.
-```{r , error = T}
+```{r , error=F}
 # No. of duplicates IDday before updatingActivityDate
 nrow(dailyDiary[duplicated(dailyDiary$IDday),]) # 788
 
@@ -1984,11 +1994,11 @@ dailyDiary$IDday <- as.factor(paste(dailyDiary$ID,dailyDiary$ActivityDate,sep="_
 nrow(dailyDiary[duplicated(dailyDiary$IDday),]) # 139
 
 # showing duplicates
-dailyDiary <- dailyDiary[order(dailyDiary$ID,dailyDiary$StartedTime),] # re-sorting by ID and time
+dailyDiary <- dailyDiary[order(dailyDiary$ID,dailyDiary$Startdate),] # re-sorting by ID and time
 rownames(dailyDiary) <- 1:nrow(dailyDiary)
 dupl <- dailyDiary[duplicated(dailyDiary$IDday),c("IDday","ActivityDate")]
 cat(nrow(dupl),"duplicated cases from",as.character(min(dupl$ActivityDate)),"to",as.character(max(dupl$ActivityDate)))
-dailyDiary[dailyDiary$IDday%in%levels(as.factor(as.character(dupl$IDday))),c("IDday","StartedTime","SubmittedTime",
+dailyDiary[dailyDiary$IDday%in%levels(as.factor(as.character(dupl$IDday))),c("IDday","Startdate","Enddate",
                                                                              colnames(dailyDiary)[c(3,10)])]
 ```
 
@@ -2004,7 +2014,7 @@ dailyDiary[dailyDiary$IDday%in%levels(as.factor(as.character(dupl$IDday))),c("ID
 
 <br>
 
-Here, for each of these groups of duplicated cases, **we only keep the first case** (i.e., the one with the earlier `StartedTime`), whereas we **exclude 139 (3%) double responses**.
+Here, for each of these groups of duplicated cases, **we only keep the first case** (i.e., the one with the earlier `Startdate`), whereas we **exclude 139 (3%) double responses**.
 ```{r }
 # excluding double responses (keeping only the first one)
 memory <- dailyDiary
@@ -2018,19 +2028,19 @@ cat("Detected",nrow(dailyDiary)-nlevels(dailyDiary$IDday),"cases of double respo
 
 <br>
 
-We can also use the updated `ActivityDate` to check the No. of cases with **`StartedTime` after `sleepLog` `EndTime` (N = 739)** (i.e., surveys answered on the following day), and the differences between the two time points (ranging from 0.5 min to 15.8h)
-```{r warning=FALSE,message=FALSE, error = T}
-# checking No. of cases with StartedTime after wake up time (739)
+We can also use the updated `ActivityDate` to check the No. of cases with **`Startdate` after `sleepLog` `EndTime` (N = 739)** (i.e., surveys answered on the following day), and the differences between the two time points (ranging from 0.5 min to 15.8h)
+```{r warning=FALSE,message=FALSE, error=F}
+# checking No. of cases with Startdate after wake up time (739)
 dailyDiary$IDday <- as.factor(paste(dailyDiary$ID,dailyDiary$ActivityDate,sep="_"))
-diaryAndsleep <- na.omit(plyr::join(dailyDiary[,c("IDday","StartedTime")],sleepLog[,c("IDday","EndTime")],by="IDday",type="left"))
-cat(nrow(diaryAndsleep[diaryAndsleep$StartedTime>diaryAndsleep$EndTime,c("StartedTime","EndTime")]),
+diaryAndsleep <- na.omit(plyr::join(dailyDiary[,c("IDday","Startdate")],sleepLog[,c("IDday","EndTime")],by="IDday",type="left"))
+cat(nrow(diaryAndsleep[diaryAndsleep$Startdate>diaryAndsleep$EndTime,c("Startdate","EndTime")]),
     "cases in which participants started filling the diary after they woke up \n(",
-    round(100*nrow(diaryAndsleep[diaryAndsleep$StartedTime>diaryAndsleep$EndTime,])/nrow(diaryAndsleep),1),
+    round(100*nrow(diaryAndsleep[diaryAndsleep$Startdate>diaryAndsleep$EndTime,])/nrow(diaryAndsleep),1),
     "% of cases with matching ID and ActivityDate between dailyDiary and sleepLog)")
 
-# summarizing differences between sleepLog EndTime and dailyDiary StartedTime in these 739 cases
-summary(as.numeric(difftime(diaryAndsleep[diaryAndsleep$StartedTime>diaryAndsleep$EndTime,"StartedTime"],
-                            diaryAndsleep[diaryAndsleep$StartedTime>diaryAndsleep$EndTime,"EndTime"],units="mins")))
+# summarizing differences between sleepLog EndTime and dailyDiary Startdate in these 739 cases
+summary(as.numeric(difftime(diaryAndsleep[diaryAndsleep$Startdate>diaryAndsleep$EndTime,"Startdate"],
+                            diaryAndsleep[diaryAndsleep$Startdate>diaryAndsleep$EndTime,"EndTime"],units="mins")))
 ```
 
 <br>
@@ -2038,7 +2048,7 @@ summary(as.numeric(difftime(diaryAndsleep[diaryAndsleep$StartedTime>diaryAndslee
 ### 2.7.6. Daylight Saving Time
 
 In the San Francisco area, the **Daylight Saving Time** (DST) changed on March 10th (1h forward) and November 3rd, 2019 (1h backward), and again on March 8th (1h forward) and November 1st, 2020 (1h backward), and finally on March 14th, 2021. Here, we inspect the distributions of `StartHour` values in the 5 days preceding and the 5 days following each of these dates, in order to check whether time was automatically updated by the wristband.
-```{r fig.width=12,fig.height=4, error = T}
+```{r fig.width=12,fig.height=4, error=F}
 # setting DST changing times
 DST.changes <- as.Date(c("2021-03-14","2021-11-07", "2022-03-13","2022-11-06","2023-03-12","2023-11-05"))
 
@@ -2047,12 +2057,12 @@ DST <- as.data.frame(matrix(nrow=0,ncol=4))
 for(i in 1:length(DST.changes)){
   DST <- rbind(DST,dailyDiary[difftime(dailyDiary$ActivityDate,DST.changes[i],units="days")>(-5) &
                           difftime(dailyDiary$ActivityDate,DST.changes[i],units="days")<5,
-                        c("ID","ActivityDate","StartedTime","StartHour","SubmittedTime","EndHour","surveyDuration")])}
+                        c("ID","ActivityDate","Startdate","StartHour","Enddate","EndHour","surveyDuration")])}
 DST$DST <- FALSE # marking DST time changes with DST = TRUE
 DST[DST$ActivityDate%in%DST.changes,"DST"] <- TRUE
 
 # computing time (hours) from midnight
-DST$timeFrom00 <- as.POSIXct(paste(lubridate::hour(DST$StartedTime), lubridate::minute(DST$StartedTime)), format="%H %M") 
+DST$timeFrom00 <- as.POSIXct(paste(lubridate::hour(DST$Startdate), lubridate::minute(DST$Startdate)), format="%H %M") 
 DST$timeFrom00 <- as.numeric(difftime(DST$timeFrom00,
                                       as.POSIXct(paste(substr(Sys.time(),1,10),"00:00:00"),tz="GMT"),units="hours"))
 # subtracting 1 day to cases with timeFrom00 > 12
@@ -2072,19 +2082,19 @@ for(i in 1:length(DST.changes)){
 
 *Comments:*
 
-- the visual inspection of `StartedTime` trends in those participants that recorded their sleep during the days around DST changes **does not seem to suggest systematic shifts** pairing with time changes
+- the visual inspection of `Startdate` trends in those participants that recorded their sleep during the days around DST changes **does not seem to suggest systematic shifts** pairing with time changes
 
-- the only DST change that shows some substantial shift in `StartedTime` is the third one (2019-03-10), with four participants out of five showing an increasing upward trend of five-to-ten hours on the following day
+- the only DST change that shows some substantial shift in `Startdate` is the third one (2019-03-10), with four participants out of five showing an increasing upward trend of five-to-ten hours on the following day
 
 <br>
 
 ### 2.7.7. Temporal continuity
 
 Finally, we plot epochs order against `Time` for each participant in order to better inspect the pattern of missing data.
-```{r message=FALSE,error=FALSE,fig.width=10,fig.height=10, error = T}
+```{r message=FALSE,error=FALSE,fig.width=10,fig.height=10, error=F}
 par(mfrow=c(3,3))
 for(ID in levels(dailyDiary$ID)){ 
-  plot((1:nrow(dailyDiary[dailyDiary$ID==ID,])~dailyDiary[dailyDiary$ID==ID,"StartedTime"]),main=ID,xlab="",ylab="") }
+  plot((1:nrow(dailyDiary[dailyDiary$ID==ID,])~dailyDiary[dailyDiary$ID==ID,"Startdate"]),main=ID,xlab="",ylab="") }
 ```
 
 <br>
@@ -2349,20 +2359,17 @@ save(HR.1min,file="DATA/datasets/HR.1min_recoded.RData")
 ## 3.7. dailyDiary
 
 From `dailyDiary`, we only keep the self-reported variables, whereas we remove all variables describing survey or participants' details.
-```{r fig.width=10,fig.height=4, error = T}
+```{r fig.width=10,fig.height=4, error=F}
 # removing variables
-toRemove <- c("TotalScore","CompletionStatus","IPAddress","Location","DMSLatLong","ChannelName","ChannelType","DeviceID",
-              "DeviceName","Browser","OS",
-              "ContactName","ContactPhone","ContactJobTitle","ContactEmail","ContactMobile",
-              "IDday","IDhour","StartHour","EndHour")
+toRemove <- c("IDday","IDhour","StartHour","EndHour")
 dailyDiary[,toRemove] <- NULL
 
 # renaming variables
 colnames(dailyDiary)[which(colnames(dailyDiary)=="Howstressfulwasyourday"
-                           ):which(colnames(dailyDiary)=="OtheregIamworriedaboutsomethingelsehappeningtomorrow")] <-
-  c("dailyStress","stress_school","stress_family","stress_health","stress_COVID","stress_peers","stress_other",
+                           ):which(colnames(dailyDiary)=="AreyouworriedaboutanyofthefollowingchoiceotheregIamworriedaboutsomethingelsehappeningtomorrow")] <-
+  c("dailyStress","stress_school","stress_family","stress_health","stress_peers","stress_other",
     "eveningMood",
-    "eveningWorry","worry_school","worry_family","worry_health","worry_peer","worry_COVID","worry_sleep","worry_other") 
+    "eveningWorry","worry_school","worry_family","worry_health","worry_peer","worry_sleep","worry_other") 
 ```
 
 <br>
@@ -2374,7 +2381,7 @@ Then, we recode self-report variables from character to numeric values.
 ### 3.7.1. dailyStress
 
 We start with `dailyStress` (i.e., “How stressful was your day?”), 1 = “Not at all stressful” to 5 = “Extremely stressful”. Only when participants reported dailyStress > 1, they were asked to indicate the sources of stress (yes/no).
-```{r fig.width=10,fig.height=4 , error = T}
+```{r fig.width=10,fig.height=4 , error=F}
 # converting as dailyStress score as numeric
 dailyDiary$dailyStress <- as.numeric(gsub("Not at all stressful","1",
                                           gsub("Not so stressful","2",
@@ -2435,7 +2442,7 @@ summary(dailyDiary[!is.na(dailyDiary$dailyStress) & dailyDiary$dailyStress>1,
 ### 3.7.2. eveningWorry
 
 The same is done for `eveningWorry` (i.e., "How worried do you feel right now?”), which is recorded from 1 = “Not at all worried” to 5 = “Extremely worried”. Only when participants reported eveningWorry > 1, they were asked to indicate the sources of worry (yes/no)
-```{r fig.width=10,fig.height=4, error = T}
+```{r fig.width=10,fig.height=4, error=F}
 # converting eveningWorry score as numeric
 dailyDiary$eveningWorry <- as.numeric(gsub("Not at all worried","1",
                                           gsub("Not so worried","2",
@@ -2496,7 +2503,7 @@ summary(dailyDiary[!is.na(dailyDiary$eveningWorry) & dailyDiary$eveningWorry>1,
 ### 3.7.3. eveningMood
 
 Finally, we recode `eveningMood` (i.e., "How is your mood right now?”) from 1 = “Very bad” to 5 = “Very good”. Here, we can see that the variable was positively skewed, with most of the ratings being 3 (29%) or 4 (36%)
-```{r fig.width=10,fig.height=4, error = T}
+```{r fig.width=10,fig.height=4, error=F}
 # converting as numeric
 dailyDiary$eveningMood <- as.numeric(gsub("Very bad","1",
                                           gsub("Somewhat bad","2",
@@ -2513,9 +2520,9 @@ hist(dailyDiary$eveningMood,breaks=50,col="black",xlab="",main="eveningMood (sli
 ### 3.7.4. Saving dataset
 
 Here, we sort the variables, we display the recoded dataset, and we save the recoded `dailyDiary` dataset.
-```{r , error = T }
+```{r , error=F }
 # sorting variables
-dailyDiary <- dailyDiary[,c("ID","group","ActivityDate","StartedTime","SubmittedTime","surveyDuration",
+dailyDiary <- dailyDiary[,c("ID","ActivityDate","Startdate","Enddate","surveyDuration",
                             "dailyStress","eveningWorry","eveningMood",
                             colnames(dailyDiary)[which(substr(colnames(dailyDiary),1,7)=="stress_")],
                             colnames(dailyDiary)[which(substr(colnames(dailyDiary),1,6)=="worry_")])]
@@ -4396,7 +4403,7 @@ save(fitbit,file="DATA/datasets/fitbitSleepAct_aggregated.RData")
 
 ## 4.6. fitbit & dailyDiary
 
-Here, we create the variable `IDday` to be used for merging the `dailyDiary` and the `fitbit` datasets. Note that `dailyDiary` `ActivityDate` was recoded to be referred to the previous day when `StartedTime` is between midnight and 8 PM (see section 2.7.5).
+Here, we create the variable `IDday` to be used for merging the `dailyDiary` and the `fitbit` datasets. Note that `dailyDiary` `ActivityDate` was recoded to be referred to the previous day when `Startdate` is between midnight and 8 PM (see section 2.7.5).
 ```{r }
 # creating common variable IDday
 dailyDiary$IDday <- as.factor(paste(dailyDiary$ID,dailyDiary$ActivityDate,sep="_"))
@@ -4461,24 +4468,24 @@ Considering the total No. of cases (i.e., **N = 6,219** non missing either in *s
 
 <br>
 
-#### 4.6.1.2. StartedTime
+#### 4.6.1.2. Startdate
 
-Then, we inspect the cases with `dailyDiary` `StartedTime` value (i.e., the time at which the survey was responded) and the corresponding `sleepLog StartTime` values (i.e., lights-off time according to `sleepLog` data).
-```{r fig.width=10,fig.height=3, error = T}
-ema$diary.timeDiff <- as.numeric(difftime(ema$StartTime,ema$StartedTime,units="hours"))
-hist(ema$diary.timeDiff,breaks=100,main="hours between dailyDiary StartedTime and sleepLog StartTime")
+Then, we inspect the cases with `dailyDiary` `Startdate` value (i.e., the time at which the survey was responded) and the corresponding `sleepLog StartTime` values (i.e., lights-off time according to `sleepLog` data).
+```{r fig.width=10,fig.height=3, error=F}
+ema$diary.timeDiff <- as.numeric(difftime(ema$StartTime,ema$Startdate,units="hours"))
+hist(ema$diary.timeDiff,breaks=100,main="hours between dailyDiary Startdate and sleepLog StartTime")
 
-# showing 1,000 cases with dailyDiary StartedTime AFTER sleepLog StartTime
-ema[!is.na(ema$diary.timeDiff) & ema$diary.timeDiff<0,c("ID","ActivityDate","StartedTime","StartTime","EndTime")]
+# showing 1,000 cases with dailyDiary Startdate AFTER sleepLog StartTime
+ema[!is.na(ema$diary.timeDiff) & ema$diary.timeDiff<0,c("ID","ActivityDate","Startdate","StartTime","EndTime")]
 ```
 
 <br>
 
 *Comments:*
 
-- in most cases (N = 3,402, 77%) `dailyDiary` `StartedTime` is **before** `sleepLog StartTime`
+- in most cases (N = 3,402, 77%) `dailyDiary` `Startdate` is **before** `sleepLog StartTime`
 
-- in 1,000 cases (**23%**) `dailyDiary StartedTime` is **after** `sleepLog` `StartTime`, above we can see that most of these cases are cases in which the **diary was responded on the following day**
+- in 1,000 cases (**23%**) `dailyDiary Startdate` is **after** `sleepLog` `StartTime`, above we can see that most of these cases are cases in which the **diary was responded on the following day**
 
 <br>
 
@@ -5945,7 +5952,7 @@ From the original No. of available `dailyDiary` cases (**N = 5,133**) a total of
 
 Here, we compute the original **No. of dailyDiary days** (`IDday`) identified by the FC3 device.
 ```{r }
-cat(nrow(ema[!is.na(ema$StartedTime),]),"nonmissing cases of dailyDiary data") # 4,945
+cat(nrow(ema[!is.na(ema$Startdate),]),"nonmissing cases of dailyDiary data") # 4,945
 ```
 
 <br>
@@ -5953,20 +5960,20 @@ cat(nrow(ema[!is.na(ema$StartedTime),]),"nonmissing cases of dailyDiary data") #
 For estimating compliance, we compute the ratio between the **No. of nonmissing days per each participant** by the length of the recording periods originally required by the study, that is **two months (60 days)**.
 ```{r fig.width=11,fig.height=3}
 # computing No. of cases with nonmissing dailyDiary dat
-Ndiary <- ema[!is.na(ema$StartedTime),]
+Ndiary <- ema[!is.na(ema$Startdate),]
 for(i in 1:nrow(compliance)){
   compliance[i,"nDiary"] <- nlevels(as.factor(as.character(Ndiary[as.character(Ndiary$ID)==compliance[i,"ID"],
                                                                   "IDday"])))
   compliance[i,"periodDiary"] <- 
-    difftime(max(Ndiary[as.character(Ndiary$ID)==compliance[i,"ID"],"StartedTime"]),
-             min(Ndiary[as.character(Ndiary$ID)==compliance[i,"ID"],"StartedTime"]),
+    difftime(max(Ndiary[as.character(Ndiary$ID)==compliance[i,"ID"],"Startdate"]),
+             min(Ndiary[as.character(Ndiary$ID)==compliance[i,"ID"],"Startdate"]),
              units="days")
   compliance[i,"nDiary_sleep"] <- 
     nlevels(as.factor(as.character(ema[as.character(ema$ID)==compliance[i,"ID"] & 
-                                         !is.na(ema$TIB) & !is.na(ema$StartedTime),"IDday"])))
+                                         !is.na(ema$TIB) & !is.na(ema$Startdate),"IDday"])))
   compliance[i,"nDiary_sleepAct"] <- 
     nlevels(as.factor(as.character(ema[as.character(ema$ID)==compliance[i,"ID"] & 
-               !is.na(ema$TIB) & !is.na(ema$TotalSteps) & !is.na(ema$StartedTime),"IDday"]))) }
+               !is.na(ema$TIB) & !is.na(ema$TotalSteps) & !is.na(ema$Startdate),"IDday"]))) }
 
 # printing compliance info
 cat("\n\ndailyDiary data:\n- Original No. days/participants =",
@@ -6002,7 +6009,7 @@ hist(compliance$nDiary,breaks=50,main="No. of nonmissing dailyDiary values per p
 
 `dailyAct` data was already filtered in section 2.7:
 
-- **43 double responses** with the same `StartedTime` values **were excluded**
+- **43 double responses** with the same `Startdate` values **were excluded**
 
 - further **139 double responses** with the same `ID` and `ActivityDate` values **were excluded**
 
@@ -6019,10 +6026,10 @@ cat("No. of excluded cases =",5133-nrow(Ndiary)) # 188
 #### 5.5.2.1. Isolated days
 
 Here, as done for `sleepLog` data in section 5.2.2.3, we better inspect cases of **tempolarily isolated days** of `dailyDiary` measures, that is `dailyDiary` data recorded substantially later than all other `dailyDiary` data previously recorded from the same participant. 
-```{r message=FALSE,warning=FALSE, fig.width=11,fig.height=4, error=T}
+```{r message=FALSE,warning=FALSE, fig.width=11,fig.height=4, error=F}
 # computing LAG values for ActivityDate
 library(dplyr)
-Ndiary <- Ndiary[order(Ndiary$ID,Ndiary$ActivityDate,Ndiary$StartedTime),]
+Ndiary <- Ndiary[order(Ndiary$ID,Ndiary$ActivityDate,Ndiary$Startdate),]
 Ndiary <- Ndiary %>% group_by(ID) %>% mutate(AD_lag = dplyr::lag(ActivityDate,n=1,default=NA))
 Ndiary <- as.data.frame(Ndiary)
 detach("package:dplyr", unload=TRUE)
@@ -6038,13 +6045,13 @@ for(i in 1:length(n)){ cat("\n- No. cases with >",n[i],"consecutive missing days
 
 # showing 7 cases with more than 7 missing days
 Ndiary.vars <- c("ID","ActivityDate","lag",
-                 colnames(ema)[which(colnames(ema)=="StartedTime"):which(colnames(ema)=="diary.timeDiff")])
+                 colnames(ema)[which(colnames(ema)=="Startdate"):which(colnames(ema)=="diary.timeDiff")])
 isolatedDay <- as.data.frame(matrix(nrow=0,ncol=length(Ndiary.vars)+1))
 for(i in 1:nrow(Nsleep)){
   if(!is.na(Ndiary[i,"lag"]) & Ndiary[i,"lag"]>7){ 
     isolatedDay <- rbind(isolatedDay,Ndiary[(i-2):(i+2),c(Ndiary.vars,"TIB","TotalSteps")]) } }
 if (nrow(isolatedDay) > 0){
-  isolatedDay[,c("ID","ActivityDate","lag","StartedTime","dailyStress","eveningMood","TIB","TotalSteps")]
+  isolatedDay[,c("ID","ActivityDate","lag","Startdate","dailyStress","eveningMood","TIB","TotalSteps")]
 }
 ```
 
@@ -6054,32 +6061,32 @@ if (nrow(isolatedDay) > 0){
 
 - consecutive missing days of `dailyDiary` data (i.e., No. of days between each and the preceding observation from the same participant) are **higher than 7 only for 7 cases**, with only two cases showing consecutive missing days > 10 days
 
-- **only one** of these cases (`ID` s052, `StartedTime` 2019-12-01 21:09:00	) is due nly due to **isolated final day** recorded several days later than the previous observation from the same participant, with **no corresponding `sleepLog` or `dailyAct` values**
+- **only one** of these cases (`ID` s052, `Startdate` 2019-12-01 21:09:00	) is due nly due to **isolated final day** recorded several days later than the previous observation from the same participant, with **no corresponding `sleepLog` or `dailyAct` values**
 
 <br>
 
 Here, we **manually remove this single case**:
-```{r message=FALSE,warning=FALSE, fig.width=11,fig.height=4, error=T}
+```{r message=FALSE,warning=FALSE, fig.width=11,fig.height=4, error=F}
 # selecting dailyDiary variables
-diaryVars <- colnames(ema)[which(colnames(ema)=="StartedTime"):which(colnames(ema)=="diary.timeDiff")]
+diaryVars <- colnames(ema)[which(colnames(ema)=="Startdate"):which(colnames(ema)=="diary.timeDiff")]
 
 # manually removing dailyDiary variables from 1 case
 memory <- ema
-ema[!is.na(ema$StartedTime) & ema$ID=="s052" & as.character(ema$StartedTime)=="2019-12-01 21:09:00", 
+ema[!is.na(ema$Startdate) & ema$ID=="s052" & as.character(ema$Startdate)=="2019-12-01 21:09:00", 
     diaryVars] <- NA
 
 # print info (10 removed cases)
 cat("No. excluded cases of isolated days =",
-    nrow(memory[!is.na(memory$StartedTime),])-nrow(ema[!is.na(ema$StartedTime),]))
+    nrow(memory[!is.na(memory$Startdate),])-nrow(ema[!is.na(ema$Startdate),]))
 ```
 
 <br>
 
 In summary, we **removed only 1 isolated observations** recorded 17 days after the remaining observations obtained from the same participant. Only one case shows more than 10 consecutive missing days.
-```{r message=FALSE,warning=FALSE, fig.width=11,fig.height=4, error=T}
+```{r message=FALSE,warning=FALSE, fig.width=11,fig.height=4, error=F}
 library(dplyr)
-Ndiary <- ema[!is.na(ema$StartedTime),]
-Ndiary <- Ndiary[order(Ndiary$ID,Ndiary$ActivityDate,Ndiary$StartedTime),]
+Ndiary <- ema[!is.na(ema$Startdate),]
+Ndiary <- Ndiary[order(Ndiary$ID,Ndiary$ActivityDate,Ndiary$Startdate),]
 Ndiary <- Ndiary %>% group_by(ID) %>% mutate(AD_lag = dplyr::lag(ActivityDate,n=1,default=NA))
 Ndiary <- as.data.frame(Ndiary)
 detach("package:dplyr", unload=TRUE)
@@ -6097,7 +6104,7 @@ for(i in 1:length(n)){ cat("\n- No. cases with >",n[i],"consecutive missing days
 Then, we check again for **duplicated cases**, that is cases with the same  `ID` and `ActivityDate` values.
 ```{r fig.width=12,fig.height=3,warning=FALSE}
 # creating IDday variable
-Ndiary <- ema[!is.na(ema$StartedTime),]
+Ndiary <- ema[!is.na(ema$Startdate),]
 Ndiary$IDday <- as.factor(paste(Ndiary$ID,Ndiary$ActivityDate,sep="_"))
 
 # sanity check by IDday (0 cases)
@@ -6120,9 +6127,9 @@ cat("Sanity check:",nrow(ema[duplicated(ema$IDday),])==0)
 #### 5.5.2.3. Missing responses
 
 Finally, we check the **No. of missing responses** at the three core variables, namely `dailyStress`, `eveningMood`, and `eveningWorry`, as well as the remaining `dailyDiary` variables.
-```{r fig.width=12,fig.height=3,warning=FALSE,error=T}
+```{r fig.width=12,fig.height=3,warning=FALSE,error=F}
 # printing info
-Ndiary <- ema[!is.na(ema$StartedTime),]
+Ndiary <- ema[!is.na(ema$Startdate),]
 n <- nrow(Ndiary)
 cat("- No. of cases with missing dailyStress:",nrow(Ndiary[is.na(Ndiary$dailyStress),]),
     "(",round(100*nrow(Ndiary[is.na(Ndiary$dailyStress),])/n,1),
@@ -6137,7 +6144,7 @@ cat("- No. of cases with missing dailyStress:",nrow(Ndiary[is.na(Ndiary$dailyStr
 
 # showing cases with 1+ missing in core variables
 Ndiary[is.na(Ndiary$dailyStress) | is.na(Ndiary$eveningWorry) | is.na(Ndiary$eveningMood),
-       c("ID","StartedTime","dailyStress","eveningMood","eveningWorry","TIB","TotalSteps","stageHR_NREM")]
+       c("ID","Startdate","dailyStress","eveningMood","eveningWorry","TIB","TotalSteps","stageHR_NREM")]
 ```
 
 <br>
@@ -6149,18 +6156,18 @@ Ndiary[is.na(Ndiary$dailyStress) | is.na(Ndiary$eveningWorry) | is.na(Ndiary$eve
 <br>
 
 Here, we **remove these 12 cases with missing responses to one or more `dailyDiar` core variables**.
-```{r error=T}
+```{r error=F}
 # removing 12 cases with no corresponding hourlySteps data
 memory <- ema
-ema[!is.na(ema$StartedTime) & (is.na(ema$dailyStress) | is.na(ema$eveningWorry) | is.na(ema$eveningMood)),
+ema[!is.na(ema$Startdate) & (is.na(ema$dailyStress) | is.na(ema$eveningWorry) | is.na(ema$eveningMood)),
     diaryVars] <- NA
-cat("Removed",nrow(ema[is.na(ema$StartedTime),])-nrow(memory[is.na(memory$StartedTime),]),"cases")
+cat("Removed",nrow(ema[is.na(ema$Startdate),])-nrow(memory[is.na(memory$Startdate),]),"cases")
 ```
 <br>
 
 Finally, we inspect the No. of missing data in the remaining `dailyDiary` variables.
-```{r error=T}
-summary(ema[!is.na(ema$StartedTime),diaryVars])
+```{r error=F}
+summary(ema[!is.na(ema$Startdate),diaryVars])
 ```
 
 <br>
@@ -6176,25 +6183,25 @@ summary(ema[!is.na(ema$StartedTime),diaryVars])
 In summary, from the original No. of `dailyDiary` measures (N = 5,133, corresponding to a compliance of 88.6%), we **excluded:** 43 + 139 = **182 duplicated cases**, **6 cases with `surveyDuration` >17h**, **1 case of isolated day**, and **12 cases of missing responses** to one or more core variables.
 
 Thus, data cleaning led to a **total No. of excluded `dailyDiary` responses = 201 cases (4%)**.
-```{r error=T}
-cat(nrow(ema[!is.na(ema$StartedTime),]),"'cleaned' cases of dailyDiary data") # 4,932
+```{r error=F}
+cat(nrow(ema[!is.na(ema$Startdate),]),"'cleaned' cases of dailyDiary data") # 4,932
 ```
 
 <br>
 
 Here, compute the updated information on the nonmissing data related to `dailyDiary` variables.
-```{r fig.width=11,fig.height=3, error=T}
+```{r fig.width=11,fig.height=3, error=F}
 # updating compliance dataset
-Ndiary <- ema[!is.na(ema$StartedTime),]
+Ndiary <- ema[!is.na(ema$Startdate),]
 for(i in 1:nrow(compliance)){
   compliance[i,"nDiary_clean"] <- 
     nlevels(as.factor(as.character(Ndiary[as.character(Ndiary$ID)==compliance[i,"ID"],"IDday"])))
   compliance[i,"nDiary_sleep_clean"] <- 
     nlevels(as.factor(as.character(ema[as.character(ema$ID)==compliance[i,"ID"] & 
-                                         !is.na(ema$TIB) & !is.na(ema$StartedTime),"IDday"])))
+                                         !is.na(ema$TIB) & !is.na(ema$Startdate),"IDday"])))
   compliance[i,"nDiary_sleepAct_clean"] <- 
     nlevels(as.factor(as.character(ema[as.character(ema$ID)==compliance[i,"ID"] & 
-               !is.na(ema$TIB) & !is.na(ema$TotalSteps) & !is.na(ema$StartedTime),"IDday"]))) }
+               !is.na(ema$TIB) & !is.na(ema$TotalSteps) & !is.na(ema$Startdate),"IDday"]))) }
 
 # printing compliance info
 cat("\n\ndailyDiary data:\n- 'clean' No. days/participants =",
@@ -6246,7 +6253,7 @@ cat("\n\nsleepLog data: total No. 'clean' cases =",nrow(ema[!is.na(ema$TIB),]), 
     round(sd(compliance$nstageHR_NREM_clean),2),") \n- 'Clean' dailyDiary compliance =",
     round(mean(100*compliance$nstageHR_NREM_clean/60),2),"% ( SD =",round(sd(100*compliance$nstageHR_NREM_clean/60),2),
     
-    ")\n\ndailyDiary data: total No. 'clean' cases =",nrow(ema[!is.na(ema$StartedTime),]), # dialyDiary
+    ")\n\ndailyDiary data: total No. 'clean' cases =",nrow(ema[!is.na(ema$Startdate),]), # dialyDiary
     "\n- No. days/participants =",round(mean(compliance$nDiary_clean),2)," ( SD =",
     round(sd(compliance$nDiary_clean),2),") \n- 'Clean' dailyDiary compliance =",
     round(mean(100*compliance$nDiary_clean/60),2),"% ( SD =",round(sd(100*compliance$nDiary_clean/60),2),
@@ -6270,8 +6277,8 @@ cat("\n\nsleepLog data: total No. 'clean' cases =",nrow(n),", of which:",
     round(100*nrow(n[!is.na(n$light),])/nrow(n),2),
     "% )\n- ",nrow(n[!is.na(n$stageHR_NREM),]),"cases with nonmissing stageHR data (",
     round(100*nrow(n[!is.na(n$stageHR_NREM),])/nrow(n),2),
-    "% )\n- ",nrow(n[!is.na(n$StartedTime),]),"cases with nonmissing dailyDiary data (",
-    round(100*nrow(n[!is.na(n$StartedTime),])/nrow(n),2),
+    "% )\n- ",nrow(n[!is.na(n$Startdate),]),"cases with nonmissing dailyDiary data (",
+    round(100*nrow(n[!is.na(n$Startdate),])/nrow(n),2),
     "% )\n- ",nrow(n[!is.na(n$TotalSteps),]),"cases with nonmissing TotalSteps data (",
     round(100*nrow(n[!is.na(n$TotalSteps),])/nrow(n),2),"% )")
 ```
@@ -6287,8 +6294,8 @@ n <- ema[!is.na(ema$light),]
 cat("\n\nsleepStages data: total No. 'clean' cases =",nrow(n),", of which:",
     "\n- ",nrow(n[!is.na(n$stageHR_NREM),]),"cases with nonmissing stageHR data (",
     round(100*nrow(n[!is.na(n$stageHR_NREM),])/nrow(n),2),
-    "% )\n- ",nrow(n[!is.na(n$StartedTime),]),"cases with nonmissing dailyDiary data (",
-    round(100*nrow(n[!is.na(n$StartedTime),])/nrow(n),2),
+    "% )\n- ",nrow(n[!is.na(n$Startdate),]),"cases with nonmissing dailyDiary data (",
+    round(100*nrow(n[!is.na(n$Startdate),])/nrow(n),2),
     "% )\n- ",nrow(n[!is.na(n$TotalSteps),]),"cases with nonmissing TotalSteps data (",
     round(100*nrow(n[!is.na(n$TotalSteps),])/nrow(n),2),"% )")
 ```
@@ -6304,8 +6311,8 @@ n <- ema[!is.na(ema$stageHR_TST),]
 cat("\n\nsleepHR data: total No. 'clean' cases =",nrow(n),", of which:",
     "\n- ",nrow(n[!is.na(n$light),]),"cases with nonmissing sleepStages data (",
     round(100*nrow(n[!is.na(n$light),])/nrow(n),2),
-    "% )\n- ",nrow(n[!is.na(n$StartedTime),]),"cases with nonmissing dailyDiary data (",
-    round(100*nrow(n[!is.na(n$StartedTime),])/nrow(n),2),
+    "% )\n- ",nrow(n[!is.na(n$Startdate),]),"cases with nonmissing dailyDiary data (",
+    round(100*nrow(n[!is.na(n$Startdate),])/nrow(n),2),
     "% )\n- ",nrow(n[!is.na(n$TotalSteps),]),"cases with nonmissing TotalSteps data (",
     round(100*nrow(n[!is.na(n$TotalSteps),])/nrow(n),2),"% )")
 ```
@@ -6317,7 +6324,7 @@ cat("\n\nsleepHR data: total No. 'clean' cases =",nrow(n),", of which:",
 Here, we summarize the No. and % of 'clean data focusing on **cases with nonmissing** `dailyDiary` cases.
 ```{r fig.width=11,fig.height=3}
 # printing compliance info
-n <- ema[!is.na(ema$StartedTime),]
+n <- ema[!is.na(ema$Startdate),]
 cat("\n\ndailyDiary data: total No. 'clean' cases =",nrow(n),", of which:",
     "\n- ",nrow(n[!is.na(n$TIB),]),"cases with nonmissing sleepLog data (",
     round(100*nrow(n[!is.na(n$TIB),])/nrow(n),2),
@@ -6537,7 +6544,7 @@ Finally, we use the `tempCont` function to **plot DAY order against time** for e
 ```{r echo=TRUE}
 tempCont <- function(data=NA,compliance=NA){ 
   
-  data <- data[!(is.na(data$TIB) & is.na(data$StartedTime)),]
+  data <- data[!(is.na(data$TIB) & is.na(data$Startdate)),]
   
   par(mfrow=c(3,3))
   for(ID in levels(data$ID)){ 
@@ -6568,7 +6575,7 @@ tempCont <- function(data=NA,compliance=NA){
   n <- IDdata[!is.na(IDdata$stageHR_NREM),]; n$ActivityDate <- n$ActivityDate + 30 # red = sleepHR
   points((1:nrow(n[n$ID==ID,])~n[n$ID==ID,"ActivityDate"]),main=ID,xlab="",ylab="",xlim=Xlim,ylim=Ylim,
          col=rgb(1,0,0,alpha=0.4),cex=3,pch=20)
-  # n <- IDdata[!is.na(IDdata$StartedTime),]; n$ActivityDate <- n$ActivityDate - 20 # green = dailyDiary
+  # n <- IDdata[!is.na(IDdata$Startdate),]; n$ActivityDate <- n$ActivityDate - 20 # green = dailyDiary
   # points((1:nrow(n[n$ID==ID,])~n[n$ID==ID,"ActivityDate"]),main=ID,xlab="",ylab="",xlim=Xlim,ylim=Ylim,
   #        col=rgb(0,1,0,alpha=0.4),cex=3,pch=20) 
   abline(h=ifelse(IDcompliance$ndailyAct_clean > 0,IDcompliance$nDiary_sleepAct_clean,
@@ -6589,7 +6596,7 @@ tempCont <- function(data=NA,compliance=NA){
 ```
 </p></details>
 
-```{r message=FALSE,error=T,fig.width=11,fig.height=11}
+```{r message=FALSE,error=F,fig.width=11,fig.height=11}
 tempCont(data=ema,compliance=compliance)
 ```
 
@@ -6645,7 +6652,7 @@ summary(ema[,c("majMiss","minMiss")])
 # 6. Data export
 
 As the very final step, we sort the *ema* columns one more time, and we export the final processed dataset.
-```{r message=FALSE,error=T,fig.width=11,fig.height=11}
+```{r message=FALSE,error=F,fig.width=11,fig.height=11}
 # sorting final dataset
 ema <- ema[,c("ID","sex","age","BMI","insomnia","insomnia.group", # demos at the beginning
               "majMiss","minMiss", # response rate criteria
@@ -6666,10 +6673,10 @@ ema <- ema[,c("ID","sex","age","BMI","insomnia","insomnia.group", # demos at the
               "TotalSteps",
               
               # dailyDiary
-              "StartedTime","SubmittedTime","surveyDuration",
+              "Startdate","Enddate","surveyDuration",
               "dailyStress","eveningWorry","eveningMood",
-              "stress_school","stress_family","stress_health","stress_COVID","stress_peers","stress_other",
-              "worry_school","worry_family","worry_health","worry_peer","worry_COVID","worry_sleep","worry_other",
+              "stress_school","stress_family","stress_health","stress_peers","stress_other",
+              "worry_school","worry_family","worry_health","worry_peer","worry_sleep","worry_other",
               
               # removed variables
               # "combined","combinedLogId","nCombined", # info on combined sleep cases
@@ -6785,9 +6792,9 @@ ema[1:3,]
 
 **dailyDiary**
 
-31. `StartedTime` = initiation hour of the diary form (in "mm-dd-yyyy hh:mm:ss" format)
+31. `Startdate` = initiation hour of the diary form (in "mm-dd-yyyy hh:mm:ss" format)
 
-32. `SubmittedTime` = submission hour of the diary form (in "mm-dd-yyyy hh:mm:ss" format)
+32. `Enddate` = submission hour of the diary form (in "mm-dd-yyyy hh:mm:ss" format)
 
 33. `surveyDuration` = duration of the survey (min)
 
