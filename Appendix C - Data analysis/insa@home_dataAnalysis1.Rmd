@@ -60,8 +60,8 @@ rm(list=ls())
 Sys.setenv(tz="GMT")
 
 # loading pre-processed data
-load("DATA/datasets/ema_finalClean.RData")
-load("DATA/datasets/demos_clean.RData")
+load("../Appendix B - Data pre-processing/DATA/datasets/ema_finalClean.RData")
+load("../Appendix B - Data pre-processing/DATA/datasets/demos_clean.RData")
 
 # used R packages
 library(ggplot2); library(gridExtra); library(lubridate); library(reshape2)
@@ -201,27 +201,27 @@ grid.arrange(ggplot(ema,aes(TotalSteps))+geom_histogram(),ggplot(ema,aes(TotalSt
 
 ### 1.2.5. Late responses
 
-Here, we create the variable `diary.nextDay` to mark those cases in which daily diaries were **filled on the following day**, that is we we mark the cases with `dailyDiary` `StartedTime` after `sleepLog` `EndTime`, and those with valid `dailyDiary` but invalid `sleepLog` data with a `StartedTime` later than 6 AM.
+Here, we create the variable `diary.nextDay` to mark those cases in which daily diaries were **filled on the following day**, that is we we mark the cases with `dailyDiary` `Startdate` after `sleepLog` `EndTime`, and those with valid `dailyDiary` but invalid `sleepLog` data with a `Startdate` later than 6 AM.
 ```{r fig.width=10,fig.height=2.5,warning=FALSE,message=FALSE}
-# marking cases with StartedTime > EndTime
+# marking cases with Startdate > EndTime
 ema[!is.na(ema$dailyStress) & !is.na(ema$TIB),c("diary.nextDay","diary.nextDay2")] <- 0
-ema[!is.na(ema$dailyStress) & !is.na(ema$TIB) & ema$StartedTime>ema$EndTime,"diary.nextDay"] <- 1
+ema[!is.na(ema$dailyStress) & !is.na(ema$TIB) & ema$Startdate>ema$EndTime,"diary.nextDay"] <- 1
 cat(nrow(ema[!is.na(ema$diary.nextDay) & ema$diary.nextDay==1,]),"diary responses entered after wake up (",
-    round(100*nrow(ema[!is.na(ema$diary.nextDay) & ema$diary.nextDay==1,])/nrow(ema[!is.na(ema$StartedTime),]),1),"% )")
+    round(100*nrow(ema[!is.na(ema$diary.nextDay) & ema$diary.nextDay==1,])/nrow(ema[!is.na(ema$Startdate),]),1),"% )")
 
-# marking cases with StartedTime > 6 AM and < 8 PM
-ema$StartedHour <- as.POSIXct(paste(hour(ema$StartedTime),minute(ema$StartedTime)),format="%H %M",tz="GMT") # isolating time
+# marking cases with Startdate > 6 AM and < 8 PM
+ema$StartedHour <- as.POSIXct(paste(hour(ema$Startdate),minute(ema$Startdate)),format="%H %M",tz="GMT") # isolating time
 sixPM <- as.POSIXct(paste(substr(Sys.time(),1,10),"06:00:00"),tz="GMT") # 6 AM
 ema[!is.na(ema$StartedHour) & ema$StartedHour>sixPM & ema$StartedHour<sixPM+14*60*60,"diary.nextDay2"] <- 1
 ema[!is.na(ema$StartedHour) & (ema$StartedHour<=sixPM | ema$StartedHour>=sixPM+14*60*60),"diary.nextDay2"] <- 0
 cat(nrow(ema[!is.na(ema$diary.nextDay2) & ema$diary.nextDay2==1,]),"diary responses entered after 6 AM (",
-    round(100*nrow(ema[!is.na(ema$diary.nextDay2) & ema$diary.nextDay2==1,])/nrow(ema[!is.na(ema$StartedTime),]),1),
+    round(100*nrow(ema[!is.na(ema$diary.nextDay2) & ema$diary.nextDay2==1,])/nrow(ema[!is.na(ema$Startdate),]),1),
     "% ), of which",nrow(ema[!is.na(ema$diary.nextDay2) & ema$diary.nextDay2==1 &
                                !is.na(ema$diary.nextDay) & ema$diary.nextDay==0,]),"marked with diary.nextDay = 0 (showed below)")
 
-# showing cases with StartedTime > 6 AM and diary.nextDay = 0
+# showing cases with Startdate > 6 AM and diary.nextDay = 0
 ema[!is.na(ema$diary.nextDay2) & ema$diary.nextDay2==1 & !is.na(ema$diary.nextDay) & ema$diary.nextDay==0,
-    c("ID","ActivityDate","StartTime","EndTime","StartedTime","diary.nextDay")]
+    c("ID","ActivityDate","StartTime","EndTime","Startdate","diary.nextDay")]
 
 # joining diary.nextDay and diary.nextDay2
 ema[!is.na(ema$diary.nextDay2) & ema$diary.nextDay2==1,"diary.nextDay"] <- 1
@@ -234,7 +234,7 @@ ema <- ema[,c(1:AD,ncol(ema),(AD+1):(ncol(ema)-1))]
 
 # printing final info
 cat(nrow(ema[!is.na(ema$diary.nextDay) & ema$diary.nextDay==1,]),"diary responses entered after wake up or after 6 AM (",
-    round(100*nrow(ema[!is.na(ema$diary.nextDay) & ema$diary.nextDay==1,])/nrow(ema[!is.na(ema$StartedTime),]),1),"% )")
+    round(100*nrow(ema[!is.na(ema$diary.nextDay) & ema$diary.nextDay==1,])/nrow(ema[!is.na(ema$Startdate),]),1),"% )")
 ```
 
 <br>
@@ -430,7 +430,7 @@ str(ema)
 
 **dailyDiary**
 
-35. `StartedTime` = initiation hour of the diary form (in "mm-dd-yyyy hh:mm:ss" format)
+35. `Startdate` = initiation hour of the diary form (in "mm-dd-yyyy hh:mm:ss" format)
 
 36. `SubmittedTime` = submission hour of the diary form (in "mm-dd-yyyy hh:mm:ss" format)
 
@@ -959,8 +959,11 @@ fitInd <- function(model=NA,from_summary=FALSE,type="multilevel",models.names=NA
 First, we evaluate the fit of the benchmark models specified for examining the factor structure at level 2.
 ```{r }
 # fit indices
-round(fitInd(model=list(fit.null,fit.ind,fit.sat),
-              models.names=c("Lv2 Null","Lv2 Independence","Lv2 Saturated")),3)
+# round(fitInd(model=list(fit.null,fit.ind,fit.sat),
+#               models.names=c("Lv2 Null","Lv2 Independence","Lv2 Saturated")),3)
+
+# round(fitInd(model=list(fit.null,fit.ind),
+#               models.names=c("Lv2 Null","Lv2 Independence")),2)
 
 # AIC also considering the configural model
 Weights(AIC(fit.null,fit.ind,fit.sat,fit.conf))
@@ -984,7 +987,7 @@ Weights(BIC(fit.null,fit.ind,fit.sat,fit.conf))
 ### 2.2.3.2. Target models
 
 Second, we evaluate the target models by keeping in mind that the **configural model is saturated and show an Heywood case** for `worry` at level 2.
-```{r }
+```{r error = T}
 cbind(round(fitInd(model=c(fit.conf,fit.weak,fit.strong),
                    models.names=c("Configural","Weak Invariance","Strong Invariance")),3),
       AICw=round(Weights(AIC(fit.conf,fit.weak,fit.strong)),3),
@@ -1006,7 +1009,7 @@ cbind(round(fitInd(model=c(fit.conf,fit.weak,fit.strong),
 ### 2.2.3.3. Fixed variance
 
 Then, we replicate the model comparison by considering the configural and weak invariance models specified by **constraining the level-2 residual variance** for item `worry` to the 15% of its total variance at level 2.
-```{r }
+```{r error=T}
 cbind(round(fitInd(model=c(fit.conf.fix,fit.weak.fix,fit.strong),
                    models.names=c("Configural","Weak Invariance","Strong Invariance")),3),
       AICw=round(Weights(AIC(fit.conf.fix,fit.weak.fix,fit.strong)),3),
@@ -1028,7 +1031,7 @@ cbind(round(fitInd(model=c(fit.conf.fix,fit.weak.fix,fit.strong),
 ### 2.2.3.4. Excluding s095
 
 Finally, we replicate the model comparison on the models specified without participant `s095`, associated with the lowest (negative) estimate for the level-2 residual variance of item `worry`.
-```{r }
+```{r error=T}
 cbind(round(fitInd(model=c(fit.conf_noInfl1,fit.weak_noInfl1,fit.strong_noInfl1),
                    models.names=c("Configural","Weak Invariance","Strong Invariance")),3),
       AICw=round(Weights(AIC(fit.conf_noInfl1,fit.weak_noInfl1,fit.strong_noInfl1)),3),
@@ -1094,7 +1097,7 @@ hist(lavPredict(fit.conf.fix,level=2),col=rgb(0,0,1,alpha=0.5),breaks=10,main="p
 hist(lavPredict(fit.conf_noInfl1,level=2),add=TRUE,col=rgb(1,0,0,alpha=0.5),breaks=10) 
 
 # including fit.conf.fix factor scores in the ema dataset (fs)
-ema[!is.na(ema$StartedTime),"fs.w"] <- as.numeric(lavPredict(fit.conf.fix,level=1))
+ema[!is.na(ema$Startdate),"fs.w"] <- as.numeric(lavPredict(fit.conf.fix,level=1))
 demos$fs.b <- as.numeric(lavPredict(fit.conf.fix,level=2))
 ema <- plyr::join(ema,demos[,c("ID","fs.b")],type="left",by="ID")
 
