@@ -95,7 +95,7 @@ multidata.read <- function(data.path,idChar,groupChar=NA,nSubj=NA,surveySparrow=
       dplyr::rename_with(., ~stringr::str_replace_all(., '\\.', '')) %>%
       na.omit() %>%
       dplyr::mutate(ID = Recordid,
-                      ID = as.factor(paste("s",substr(Recordid,idChar[1],idChar[2]),"_",sep=""))) %>%
+                      ID = as.factor(paste(substr(Recordid,idChar[1],idChar[2]),sep=""))) %>%
       dplyr::relocate(ID) %>%
       dplyr::select(-c("Recordid")) %>%
       dplyr::mutate(Startdate = sub("\\..*", "", Startdate),
@@ -106,7 +106,8 @@ multidata.read <- function(data.path,idChar,groupChar=NA,nSubj=NA,surveySparrow=
     # iteratively reading each file and adding it to the same data.frame
     for(path in paths){ 
       new.data <- read.csv(paste(data.path,path,sep="/"))
-      new.data$ID <- as.factor(paste("s",substr(path,idChar[1],idChar[2]),sep="")) # participant's identifier from file name
+      new.data$ID <- as.factor(paste(
+        substr(path,idChar[1],idChar[2]),sep="")) # participant's identifier from file name
       if(!is.na(groupChar[1]) & !is.na(groupChar[2])){
         new.data$group <- as.factor(substr(path,groupChar[1],groupChar[2])) # group's identifier from file name
         new.data <- new.data[,c(ncol(new.data)-1,ncol(new.data),1:(ncol(new.data)-2))] # sorting columns
@@ -144,25 +145,25 @@ multidata.read <- function(data.path,idChar,groupChar=NA,nSubj=NA,surveySparrow=
 ```{r }
 library(dplyr)
 # Fitbit - dailyAct (6,019 days from 93 participants)
-dailyAct <- multidata.read(data.path="DATA/Fitbit All Daily Activity",idChar=c(5,7),groupChar=c(8,11),nSubj=3)
+dailyAct <- multidata.read(data.path="DATA/Fitbit All Daily Activity",idChar=c(1,6),groupChar=c(8,11),nSubj=3)
 
 # Fitbit - hourlySteps (143,961 hours from 93 participants)
-hourlySteps <- multidata.read(data.path="DATA/Fitbit Hourly Steps",idChar=c(5,7),groupChar=c(8,11),nSubj=3)
+hourlySteps <- multidata.read(data.path="DATA/Fitbit Hourly Steps",idChar=c(1,6),groupChar=c(8,11),nSubj=3)
 
 # Fitbit - sleepLog (5,403 nights from 93 participants)
-sleepLog <- multidata.read(data.path="DATA/Fitbit Sleep Log",idChar=c(5,7),groupChar=c(8,11),nSubj=3)
+sleepLog <- multidata.read(data.path="DATA/Fitbit Sleep Log",idChar=c(1,6),groupChar=c(8,11),nSubj=3)
 
 # Fitbit - sleepEBE (4,243,037 epochs from 93 participants)
-sleepEBE <- multidata.read(data.path="DATA/Fitbit Sleep Stages (30sec)",idChar=c(5,7),groupChar=c(8,11),nSubj=3)
+sleepEBE <- multidata.read(data.path="DATA/Fitbit Sleep Stages (30sec)",idChar=c(1,6),groupChar=c(8,11),nSubj=3)
 
 # Fitbit - classicEBE (2,505,034 epochs from 93 participants)
-classicEBE <- multidata.read(data.path="DATA/Fitbit Sleep Classic (1min)",idChar=c(5,7),groupChar=c(8,11),nSubj=3) 
+classicEBE <- multidata.read(data.path="DATA/Fitbit Sleep Classic (1min)",idChar=c(1,6),groupChar=c(8,11),nSubj=3) 
 
 # Fitbit - HR.1min (6,986,307 epochs from 93 participants)
-HR.1min <- multidata.read(data.path="DATA/Fitbit HR (1min)",idChar=c(5,7),groupChar=c(8,11),nSubj=3)
+HR.1min <- multidata.read(data.path="DATA/Fitbit HR (1min)",idChar=c(1,6),groupChar=c(8,11),nSubj=3)
 
 # Survey Sparrow - dailyDiary (5,133 daily responses from 93 participants)
-dailyDiary <- multidata.read(data.path="DATA/Survey Sparrows",idChar=c(5,7),nSubj=3,surveySparrow=TRUE)
+dailyDiary <- multidata.read(data.path="DATA/Survey Sparrows",idChar=c(1,6),nSubj=3,surveySparrow=TRUE)
 ```
 
 <br>
@@ -2383,11 +2384,11 @@ Then, we recode self-report variables from character to numeric values.
 We start with `dailyStress` (i.e., “How stressful was your day?”), 1 = “Not at all stressful” to 5 = “Extremely stressful”. Only when participants reported dailyStress > 1, they were asked to indicate the sources of stress (yes/no).
 ```{r fig.width=10,fig.height=4 , error=F}
 # converting as dailyStress score as numeric
-dailyDiary$dailyStress <- as.numeric(gsub("Not at all stressful","1",
-                                          gsub("Not so stressful","2",
-                                               gsub("Somewhat stressful","3",
-                                                    gsub("Very stressful","4",
-                                                         gsub("Extremely stressful","5",
+dailyDiary$dailyStress <- as.numeric(gsub("Not at all stressful","0",
+                                          gsub("Not so stressful","1",
+                                               gsub("Somewhat stressful","2",
+                                                    gsub("Very stressful","3",
+                                                         gsub("Extremely stressful","4",
                                                               dailyDiary$dailyStress))))))
 # converting dailyStress sources as binary (0/1)
 for(Var in colnames(dailyDiary)[which(substr(colnames(dailyDiary),1,7)=="stress_")]){
@@ -2444,11 +2445,11 @@ summary(dailyDiary[!is.na(dailyDiary$dailyStress) & dailyDiary$dailyStress>1,
 The same is done for `eveningWorry` (i.e., "How worried do you feel right now?”), which is recorded from 1 = “Not at all worried” to 5 = “Extremely worried”. Only when participants reported eveningWorry > 1, they were asked to indicate the sources of worry (yes/no)
 ```{r fig.width=10,fig.height=4, error=F}
 # converting eveningWorry score as numeric
-dailyDiary$eveningWorry <- as.numeric(gsub("Not at all worried","1",
-                                          gsub("Not so worried","2",
-                                               gsub("Somewhat worried","3",
-                                                    gsub("Very worried","4",
-                                                         gsub("Extremely worried","5",
+dailyDiary$eveningWorry <- as.numeric(gsub("Not at all worried","0",
+                                          gsub("Not so worried","1",
+                                               gsub("Somewhat worried","2",
+                                                    gsub("Very worried","3",
+                                                         gsub("Extremely worried","4",
                                                               dailyDiary$eveningWorry))))))
 # converting eveningWorry sources as binary (0/1)
 for(Var in colnames(dailyDiary)[which(substr(colnames(dailyDiary),1,6)=="worry_")]){
@@ -2505,11 +2506,11 @@ summary(dailyDiary[!is.na(dailyDiary$eveningWorry) & dailyDiary$eveningWorry>1,
 Finally, we recode `eveningMood` (i.e., "How is your mood right now?”) from 1 = “Very bad” to 5 = “Very good”. Here, we can see that the variable was positively skewed, with most of the ratings being 3 (29%) or 4 (36%)
 ```{r fig.width=10,fig.height=4, error=F}
 # converting as numeric
-dailyDiary$eveningMood <- as.numeric(gsub("Very bad","1",
-                                          gsub("Somewhat bad","2",
-                                               gsub("Neither bad or good","3",
-                                                    gsub("Somewhat good","4",
-                                                         gsub("Very good","5",
+dailyDiary$eveningMood <- as.numeric(gsub("Very bad","0",
+                                          gsub("Somewhat bad","1",
+                                               gsub("Neither bad or good","2",
+                                                    gsub("Somewhat good","3",
+                                                         gsub("Very good","4",
                                                               dailyDiary$eveningMood))))))
 # plotting
 hist(dailyDiary$eveningMood,breaks=50,col="black",xlab="",main="eveningMood (slightly skewed)")
