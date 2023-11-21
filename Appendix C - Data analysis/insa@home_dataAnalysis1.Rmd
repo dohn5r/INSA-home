@@ -1009,7 +1009,7 @@ cbind(round(fitInd(model=c(fit.conf,fit.weak,fit.strong),
 ### 2.2.3.3. Fixed variance
 
 Then, we replicate the model comparison by considering the configural and weak invariance models specified by **constraining the level-2 residual variance** for item `worry` to the 15% of its total variance at level 2.
-```{r error=T}
+```{r error = T}
 cbind(round(fitInd(model=c(fit.conf.fix,fit.weak.fix,fit.strong),
                    models.names=c("Configural","Weak Invariance","Strong Invariance")),3),
       AICw=round(Weights(AIC(fit.conf.fix,fit.weak.fix,fit.strong)),3),
@@ -1031,7 +1031,7 @@ cbind(round(fitInd(model=c(fit.conf.fix,fit.weak.fix,fit.strong),
 ### 2.2.3.4. Excluding s095
 
 Finally, we replicate the model comparison on the models specified without participant `s095`, associated with the lowest (negative) estimate for the level-2 residual variance of item `worry`.
-```{r error=T}
+```{r error = T}
 cbind(round(fitInd(model=c(fit.conf_noInfl1,fit.weak_noInfl1,fit.strong_noInfl1),
                    models.names=c("Configural","Weak Invariance","Strong Invariance")),3),
       AICw=round(Weights(AIC(fit.conf_noInfl1,fit.weak_noInfl1,fit.strong_noInfl1)),3),
@@ -1087,7 +1087,7 @@ Here, we inspect and compare the standardized factor loadings estimated by the m
 ### 2.2.4. Factor scores
 
 Finally, we inspect the **factor scores predicted at the within and between level** by the selected model (i.e., configural model), and we compare the factor scores predicted by `fit.conf.fix` (in blue) and `fit.conf.noInfl1` (in red). Factor scores are then **included in the `ema` dataset**, to be used in the following analyses.
-```{r fig.width=10,fig.height=4}
+```{r fig.width=10,fig.height=4, error = T}
 # level 1
 hist(lavPredict(fit.conf.fix,level=1),col=rgb(0,0,1,alpha=0.5),breaks=100,main="predicted factor scores lv1")
 hist(lavPredict(fit.conf_noInfl1,level=1),add=TRUE,col=rgb(1,0,0,alpha=0.5),breaks=100) 
@@ -1239,7 +1239,7 @@ Although the Psychological Distress scale presents **some problems** (i.e., Heyw
 ## 2.5. Aggregate score
 
 Here, we compute the aggregate `PsyDist` score by averaging the three item scores.
-```{r warning=FALSE,message=FALSE,fig.width=10,fig.height=4}
+```{r warning=FALSE,message=FALSE,fig.width=10,fig.height=4,error = T}
 # computing aggregated score
 ema$PsyDist <- apply(ema[,c("stress","worry","mood")],1,mean)
 
@@ -1461,7 +1461,7 @@ multidesc <- function(long,wide,cluster="S.ID",lv1,lv2,group,group.labels=NA){ r
 ```
 </p></details>
 
-```{r warning=FALSE,message=FALSE}
+```{r warning=FALSE,message=FALSE, error = T}
 # selecting lv1 continuous variables
 lv1 <- c("TIB","TST","WASO","SE","light.p","deep.p","rem.p", # sleep architecture
          "SO.num","WakeUp.num", # sleep timing
@@ -1539,7 +1539,7 @@ multicorr <- function(long,wide,lv1,lv2,cluster="ID"){ require(Hmisc); require(R
 ```
 </p></details>
 
-```{r fig.width=12,fig.height=9,message=FALSE,warning=FALSE}
+```{r fig.width=12,fig.height=9,message=FALSE,warning=FALSE,error = T}
 desc <- cbind(desc,
               multicorr(long=ema,wide=demos,cluster="ID",lv1=lv1,lv2=lv2))
 rownames(desc) <- desc$Measure
@@ -1551,7 +1551,7 @@ desc
 <br>
 
 Correlations are also plotted below (blue = negative, white = uncorrelated, red = positive):
-```{r warning=FALSE,message=FALSE,fig.width=12,fig.height=7}
+```{r warning=FALSE,message=FALSE,fig.width=12,fig.height=7,error = T}
 ggplot(melt(as.matrix(desc[,6:ncol(desc)])),aes(x=Var1, y=Var2, fill=value)) + 
     geom_tile() + 
     geom_text(aes(x = Var1, y = Var2, label = round(value,2)),color="black",size=3.5)+
@@ -1708,7 +1708,7 @@ for(Var in d.ratings){ hist(ema[,Var],main=Var,xlab="",breaks=30) }
 <br>
 
 Here, we visualize the distributions of the **aggregated scores** and that of the **factor scores** predicted by the configural invariance MCFA model selected above.
-```{r fig.width=10,fig.height=6,message=FALSE,warning=FALSE}
+```{r fig.width=10,fig.height=6,message=FALSE,warning=FALSE,error =T}
 # mean centering PsyDist
 demos$PsyDist.cm <- summarySE(ema,measurevar="PsyDist",groupvars="ID",na.rm=TRUE)[,3]
 ema <- plyr::join(ema,demos[,c("ID","PsyDist.cm")],by="ID",type="left")
@@ -1744,7 +1744,7 @@ for(Var in c("age","BMI")){
 <br>
 
 ##### s.archit
-```{r echo=TRUE,fig.width=5,fig.height=4,warning=FALSE}
+```{r echo=TRUE,fig.width=5,fig.height=4,warning=FALSE, error = T}
 for(Var in s.archit){ 
   print(ggplot(ema,aes_string(x="insomnia",y=Var,fill="insomnia")) + ggtitle(paste(Var,"in controls vs. insomnia")) +
           geom_point(col="gray",position = position_jitter(width = .15)) + geom_violin(alpha=.4)) }
@@ -1759,7 +1759,7 @@ for(Var in s.archit){
 <br>
 
 ##### s.timing
-```{r echo=TRUE,fig.width=5,fig.height=4,warning=FALSE}
+```{r echo=TRUE,fig.width=5,fig.height=4,warning=FALSE, error = T}
 for(Var in s.timing){ 
   print(ggplot(ema,aes_string(x="insomnia",y=Var,fill="insomnia")) + ggtitle(paste(Var,"in controls vs. insomnia")) +
           geom_point(col="gray",position = position_jitter(width = .15)) + geom_violin(alpha=.4)) }
@@ -1774,7 +1774,7 @@ for(Var in s.timing){
 <br>
 
 ##### s.auton
-```{r echo=TRUE,fig.width=5,fig.height=4,warning=FALSE}
+```{r echo=TRUE,fig.width=5,fig.height=4,warning=FALSE, error = T}
 for(Var in s.auton){ 
   print(ggplot(ema,aes_string(x="insomnia",y=Var,fill="insomnia")) + ggtitle(paste(Var,"in controls vs. insomnia")) +
           geom_point(col="gray",position = position_jitter(width = .15)) + geom_violin(alpha=.4)) }
@@ -1789,7 +1789,7 @@ for(Var in s.auton){
 <br>
 
 ##### s.variab
-```{r echo=TRUE,fig.width=5,fig.height=4,warning=FALSE}
+```{r echo=TRUE,fig.width=5,fig.height=4,warning=FALSE, error = T}
 # day-level
 for(Var in s.variab){ 
   print(ggplot(ema,aes_string(x="insomnia",y=Var,fill="insomnia")) + ggtitle(paste(Var,"in controls vs. insomnia")) +
@@ -1806,7 +1806,7 @@ for(Var in s.variab){
 <br>
 
 ##### TotalSteps1000
-```{r echo=TRUE,fig.width=5,fig.height=4,warning=FALSE}
+```{r echo=TRUE,fig.width=5,fig.height=4,warning=FALSE,error = T}
 for(Var in "TotalSteps1000"){ 
   print(ggplot(ema,aes_string(x="insomnia",y=Var,fill="insomnia")) + ggtitle(paste(Var,"in controls vs. insomnia")) +
           geom_point(col="gray",position = position_jitter(width = .15)) + geom_violin(alpha=.4)) }
@@ -1821,7 +1821,7 @@ for(Var in "TotalSteps1000"){
 <br>
 
 ##### Diary ratings
-```{r echo=TRUE,fig.width=5,fig.height=4,warning=FALSE}
+```{r echo=TRUE,fig.width=5,fig.height=4,warning=FALSE, error = T}
 # item ratings
 for(Var in d.ratings){ 
   print(ggplot(ema,aes_string(x="insomnia",y=Var,fill="insomnia")) + ggtitle(paste(Var,"in controls vs. insomnia")) +
@@ -1854,7 +1854,7 @@ for(Var in c("age","BMI")){
 <br>
 
 ##### s.archit
-```{r echo=TRUE,fig.width=5,fig.height=4,warning=FALSE}
+```{r echo=TRUE,fig.width=5,fig.height=4,warning=FALSE,error = T}
 for(Var in s.archit){ 
   print(ggplot(ema,aes_string(x="insomnia.group",y=Var,fill="insomnia.group")) + 
           ggtitle(paste(Var,"in controls vs. insomnia groups")) +
@@ -1872,7 +1872,7 @@ for(Var in s.archit){
 <br>
 
 ##### s.timing
-```{r echo=TRUE,fig.width=5,fig.height=4,warning=FALSE}
+```{r echo=TRUE,fig.width=5,fig.height=4,warning=FALSE, error = T}
 for(Var in s.timing){ 
   print(ggplot(ema,aes_string(x="insomnia.group",y=Var,fill="insomnia.group")) + 
           ggtitle(paste(Var,"in controls vs. insomnia groups")) +
@@ -1888,7 +1888,7 @@ for(Var in s.timing){
 <br>
 
 ##### s.auton
-```{r echo=TRUE,fig.width=5,fig.height=4,warning=FALSE}
+```{r echo=TRUE,fig.width=5,fig.height=4,warning=FALSE,error = T}
 for(Var in s.auton){ 
   print(ggplot(ema,aes_string(x="insomnia.group",y=Var,fill="insomnia.group")) + 
           ggtitle(paste(Var,"in controls vs. insomnia groups")) +
@@ -1906,7 +1906,7 @@ for(Var in s.auton){
 <br>
 
 ##### s.variab
-```{r echo=TRUE,fig.width=5,fig.height=4,warning=FALSE}
+```{r echo=TRUE,fig.width=5,fig.height=4,warning=FALSE, error = T}
 for(Var in s.variab){ 
   print(ggplot(ema,aes_string(x="insomnia.group",y=Var,fill="insomnia.group")) + 
           ggtitle(paste(Var,"in controls vs. insomnia groups")) +
@@ -1923,7 +1923,7 @@ for(Var in s.variab){
 <br>
 
 ##### TotalSteps1000
-```{r echo=TRUE,fig.width=5,fig.height=4,warning=FALSE}
+```{r echo=TRUE,fig.width=5,fig.height=4,warning=FALSE, error = T}
 for(Var in "TotalSteps1000"){ 
   print(ggplot(ema,aes_string(x="insomnia.group",y=Var,fill="insomnia.group")) + 
           ggtitle(paste(Var,"in controls vs. insomnia groups")) +
@@ -1939,7 +1939,7 @@ for(Var in "TotalSteps1000"){
 <br>
 
 ##### Diary ratings
-```{r echo=TRUE,fig.width=5,fig.height=4,warning=FALSE}
+```{r echo=TRUE,fig.width=5,fig.height=4,warning=FALSE, error = T}
 # item ratings
 for(Var in d.ratings){ 
   print(ggplot(ema,aes_string(x="insomnia.group",y=Var,fill="insomnia.group")) + 
@@ -1966,7 +1966,7 @@ for(Var in c("PsyDist.cm","fs.b")){
 Here, we explore the distributions of each continuous variable between girls and boys.
 
 #### Demos
-```{r echo=TRUE,fig.width=5,fig.height=4,warning=FALSE}
+```{r echo=TRUE,fig.width=5,fig.height=4,warning=FALSE, error = T}
 for(Var in c("age","BMI")){ 
   print(ggplot(demos,aes_string(x="sex",y=Var,fill="sex")) + ggtitle(paste(Var,"in females vs. males")) +
           geom_point(col="gray",position = position_jitter(width = .15)) + geom_violin(alpha=.4)) }
@@ -1981,7 +1981,7 @@ for(Var in c("age","BMI")){
 <br>
 
 #### s.archit
-```{r echo=TRUE,fig.width=5,fig.height=4,warning=FALSE}
+```{r echo=TRUE,fig.width=5,fig.height=4,warning=FALSE, error = T}
 for(Var in s.archit){ 
   print(ggplot(ema,aes_string(x="sex",y=Var,fill="sex")) + ggtitle(paste(Var,"in females vs. males")) +
           geom_point(col="gray",position = position_jitter(width = .15)) + geom_violin(alpha=.4)) }
@@ -1996,7 +1996,7 @@ for(Var in s.archit){
 <br>
 
 #### s.timing
-```{r echo=TRUE,fig.width=5,fig.height=4,warning=FALSE}
+```{r echo=TRUE,fig.width=5,fig.height=4,warning=FALSE, error = T}
 for(Var in s.timing){ 
   print(ggplot(ema,aes_string(x="sex",y=Var,fill="sex")) + ggtitle(paste(Var,"in females vs. males")) +
           geom_point(col="gray",position = position_jitter(width = .15)) + geom_violin(alpha=.4)) }
@@ -2011,7 +2011,7 @@ for(Var in s.timing){
 <br>
 
 #### s.auton
-```{r echo=TRUE,fig.width=5,fig.height=4,warning=FALSE}
+```{r echo=TRUE,fig.width=5,fig.height=4,warning=FALSE, error = T}
 for(Var in s.auton){ 
   print(ggplot(ema,aes_string(x="sex",y=Var,fill="sex")) + ggtitle(paste(Var,"in females vs. males")) +
           geom_point(col="gray",position = position_jitter(width = .15)) + geom_violin(alpha=.4)) }
@@ -2026,7 +2026,7 @@ for(Var in s.auton){
 <br>
 
 #### s.variab
-```{r echo=TRUE,fig.width=5,fig.height=4,warning=FALSE}
+```{r echo=TRUE,fig.width=5,fig.height=4,warning=FALSE, error = T}
 for(Var in s.variab){ 
   print(ggplot(ema,aes_string(x="sex",y=Var,fill="sex")) + ggtitle(paste(Var,"in females vs. males")) +
           geom_point(col="gray",position = position_jitter(width = .15)) + geom_violin(alpha=.4) +
@@ -2042,7 +2042,7 @@ for(Var in s.variab){
 <br>
 
 #### TotalSteps1000
-```{r echo=TRUE,fig.width=5,fig.height=4,warning=FALSE}
+```{r echo=TRUE,fig.width=5,fig.height=4,warning=FALSE, error = T}
 for(Var in "TotalSteps1000"){ 
   print(ggplot(ema,aes_string(x="sex",y=Var,fill="sex")) + ggtitle(paste(Var,"in females vs. males")) +
           geom_point(col="gray",position = position_jitter(width = .15)) + geom_violin(alpha=.4)) }
@@ -2057,7 +2057,7 @@ for(Var in "TotalSteps1000"){
 <br>
 
 #### Diary ratings
-```{r echo=TRUE,fig.width=5,fig.height=4,warning=FALSE}
+```{r echo=TRUE,fig.width=5,fig.height=4,warning=FALSE, error = T}
 # item ratings
 for(Var in d.ratings){ 
   print(ggplot(ema,aes_string(x="sex",y=Var,fill="sex")) + ggtitle(paste(Var,"in females vs. males")) +
@@ -2082,7 +2082,7 @@ for(Var in c("PsyDist.cm","fs.b")){
 Here, we explore the explore the differences between cases observed during **weekend vs weekdays**. Both the `weekday` (weekend = Saturday and Sunday) and the `weekday.sleep` variable (weekend = Friday and Saturday) are explored.
 
 #### s.archit
-```{r echo=TRUE,fig.width=5,fig.height=4,warning=FALSE}
+```{r echo=TRUE,fig.width=5,fig.height=4,warning=FALSE, error = T}
 # weekday
 for(Var in s.archit){ 
   print(ggplot(ema,aes_string(x="weekday",y=Var,fill="weekday")) + ggtitle(paste(Var,"in weekdays vs. weekend (SAT-SUN)")) +
@@ -2364,7 +2364,7 @@ Here, we descriptively characterize the sample and the subgroups of participants
 ### 3.7.1. Stress
 
 Here, we describe the `stress` variable in the sample, and across the subgroups of participants.
-```{r echo=TRUE,fig.width=11,fig.height=6,warning=FALSE,message=FALSE}
+```{r echo=TRUE,fig.width=11,fig.height=6,warning=FALSE,message=FALSE,error=T}
 # plotting
 grid.arrange(ggplot(ema[!is.na(ema$stress),],aes(x=as.factor(stress))) + geom_histogram(stat="count") + ggtitle("stress in the sample") + 
                geom_text(aes(label = scales::percent((..count..)/sum(..count..))), stat = "count", vjust = -0.25) + ylim(0,1700),
@@ -2483,7 +2483,7 @@ for(Var in stressSources){
 ### 3.7.3. worry
 
 Here, we describe the `worry` variable in the sample, and across the subgroups of participants.
-```{r echo=TRUE,fig.width=11,fig.height=6,warning=FALSE,message=FALSE}
+```{r echo=TRUE,fig.width=11,fig.height=6,warning=FALSE,message=FALSE,error=T}
 # plotting
 grid.arrange(ggplot(ema[!is.na(ema$worry),],aes(x=as.factor(worry))) + geom_histogram(stat="count") + 
                ggtitle("worry in the sample") + 
@@ -2652,7 +2652,7 @@ ggsave(filename="RESULTS/Figure2.tiff",plot=p,dpi=500)
 ### 3.7.6. mood
 
 Here, we describe the `mood` variable in the sample, and across the subgroups of participants.
-```{r echo=TRUE,fig.width=11,fig.height=6,warning=FALSE,message=FALSE}
+```{r echo=TRUE,fig.width=11,fig.height=6,warning=FALSE,message=FALSE,error=T}
 # plotting
 grid.arrange(ggplot(ema[!is.na(ema$mood),],aes(x=as.factor(mood))) + geom_histogram(stat="count") + 
                ggtitle("mood in the sample") + 
