@@ -171,9 +171,9 @@ dailyDiary <- multidata.read(data.path="DATA/Survey Sparrows",idChar=c(1,6),nSub
 Then, we read the **demos** dataset, including *demographic variables* (N = 107) that were recorded in the demographics.csv data file.
 ```{r }
 # Demographics - demos (107 participants)
-
-demos <- load("/Users/dohn5r/Documents/INSA-home/Appendix D - Data/demosFINAL.RData")
-ema <- load("/Users/dohn5r/Documents/INSA-home/Appendix D - Data/emaFINAL.RData")
+demos = read.csv("/Users/dohn5r/Documents/INSA-home/Appendix B - Data pre-processing/DATA/demographics.csv")
+#load("/Users/dohn5r/Documents/INSA-home/Appendix D - Data/demosFINAL.RData")
+#load("/Users/dohn5r/Documents/INSA-home/Appendix D - Data/emaFINAL.RData")
 ```
 
 <br>
@@ -2541,10 +2541,10 @@ save(dailyDiary,file="DATA/datasets/dailyDiary_recoded.RData")
 
 From `demos`, we keep the participant's identifier, sex, age, BMI, and insomnia group, with sex and insomnia group being recoded as factor.
 ```{r fig.width=10,fig.height=4}
-demos <- read.csv("/Users/dohn5r/Documents/INSA-home/Appendix B - Data pre-processing/DATA/demographics.csv",header=TRUE) # demos
+demos <- read.csv("~/Documents/INSA-home/Appendix B - Data pre-processing/DATA/demographics.csv",header=TRUE) # demos
 
 # recoding participants' identifier
-demos$ID <- as.factor(paste("s",substr(demos$id,5,7),sep=""))
+demos$ID <- as.factor(demos$ID)
 
 # changing variable classes
 demos$sex <- gsub("0","F",gsub("1","M",demos$sex))
@@ -2587,7 +2587,6 @@ demos[1:3,]
 
 # saving dataset
 save(demos,file="DATA/datasets/demos_recoded.RData")
-save(ema,file="DATA/datasets/ema.RData")
 
 ```
 
@@ -2615,7 +2614,7 @@ load("DATA/datasets/LogId_special.RData") # special cases of LogId
 load("DATA/datasets/HR.1min_recoded.RData") # HR.1min
 load("DATA/datasets/dailyDiary_recoded.RData")  # dailyDiary
 load("DATA/datasets/demos_recoded.RData") # demos
-load("DATA/datasets/ema.RData")
+#load("DATA/datasets/ema.RData")
 ```
 
 <br>
