@@ -32,9 +32,8 @@ The data processing pipeline is **[depicted at this page](https://sri-human-slee
 rm(list=ls())
 
 # loading datasets exported at the end of the first Data Analysis script
-load("emaFINAL.RData")
-load("demosFINAL.RData")
-
+load("~/Documents/INSA-home/Appendix C - Data analysis/demosFINAL.RData")
+load("~/Documents/INSA-home/Appendix C - Data analysis/emaFINAL.RData")
 # setting system time zone to GMT (for consistent temporal synchronization)
 Sys.setenv(tz="GMT")
 ```
@@ -118,6 +117,8 @@ glmerAn <- function(modelType=c("GLM","GLMER"),long,wide,resp,fix.eff,cluster.ID
                     show.data=FALSE,dot.size=1,dodge=0,ci.lv=.95,y.lim=NA,return.plot=FALSE,
                     key.model=NA,key.predictor=NA,digits=3,messages=TRUE){ 
   
+  fix.eff <- predictors[sapply(predictors, function(pred) length(unique(long[[pred]])) > 1)]
+
   if(messages==TRUE){ cat("Running",modelType,"analysis of",resp,"...") }
   
   # data preparation ..................................................................................................................
@@ -130,6 +131,8 @@ glmerAn <- function(modelType=c("GLM","GLMER"),long,wide,resp,fix.eff,cluster.ID
   wide <- wide[order(wide$ID),] # sorting wide by ID
   colnames(long)[which(colnames(long)==timeVar)] <- "time" # time variable
   long <- long[order(long$ID,long$time),] # sorting long by ID and time
+  
+  
   if(nlevels(long$ID)!=nlevels(wide$ID)){ stop(message="Error: different No. of participants in long and wide datasets") }
   
   # listwise deletion
@@ -287,7 +290,7 @@ glmerAn <- function(modelType=c("GLM","GLMER"),long,wide,resp,fix.eff,cluster.ID
     if(messages==TRUE){ # printing selected model
       if(nrow(lrt[!is.na(lrt$`Pr(>Chisq)`) & lrt$`Pr(>Chisq)` < 0.05,])==0 ){ 
         cat("\n   Selected model:",ifelse(is.na(mComp.baseline),"Null model","Baseline"))
-    } else { for(i in nrow(lrt):2){ if(lrt[i,ncol(lrt)] < .05){ if(messages==TRUE){ cat("\n   Selected model:",rownames(lrt)[i]) }
+    } else { for(i in nrow(lrt):2){ !is.na(lrt[i,ncol(lrt)]) & if(lrt[i,ncol(lrt)] < .05){ if(messages==TRUE){ cat("\n   Selected model:",rownames(lrt)[i]) }
                                        break }}}}
     if("mComp"%in%outputs){ print(kable(round(lrt,digits))) } # printing LRT table
     # Akaike weights
