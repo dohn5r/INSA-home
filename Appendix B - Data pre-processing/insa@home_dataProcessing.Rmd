@@ -145,25 +145,25 @@ multidata.read <- function(data.path,idChar,groupChar=NA,nSubj=NA,surveySparrow=
 ```{r }
 library(dplyr)
 # Fitbit - dailyAct (6,019 days from 93 participants)
-dailyAct <- multidata.read(data.path="DATA/Fitbit All Daily Activity",idChar=c(1,6),groupChar=c(8,11),nSubj=3)
+dailyAct <- multidata.read(data.path="DATA/Fitbit All Daily Activity",idChar=c(1,6),groupChar=c(8,11),nSubj=5)
 
 # Fitbit - hourlySteps (143,961 hours from 93 participants)
-hourlySteps <- multidata.read(data.path="DATA/Fitbit Hourly Steps",idChar=c(1,6),groupChar=c(8,11),nSubj=3)
+hourlySteps <- multidata.read(data.path="DATA/Fitbit Hourly Steps",idChar=c(1,6),groupChar=c(8,11),nSubj=5)
 
 # Fitbit - sleepLog (5,403 nights from 93 participants)
-sleepLog <- multidata.read(data.path="DATA/Fitbit Sleep Log",idChar=c(1,6),groupChar=c(8,11),nSubj=3)
+sleepLog <- multidata.read(data.path="DATA/Fitbit Sleep Log",idChar=c(1,6),groupChar=c(8,11),nSubj=5)
 
 # Fitbit - sleepEBE (4,243,037 epochs from 93 participants)
-sleepEBE <- multidata.read(data.path="DATA/Fitbit Sleep Stages (30sec)",idChar=c(1,6),groupChar=c(8,11),nSubj=3)
+sleepEBE <- multidata.read(data.path="DATA/Fitbit Sleep Stages (30sec)",idChar=c(1,6),groupChar=c(8,11),nSubj=5)
 
 # Fitbit - classicEBE (2,505,034 epochs from 93 participants)
-classicEBE <- multidata.read(data.path="DATA/Fitbit Sleep Classic (1min)",idChar=c(1,6),groupChar=c(8,11),nSubj=3) 
+classicEBE <- multidata.read(data.path="DATA/Fitbit Sleep Classic (1min)",idChar=c(1,6),groupChar=c(8,11),nSubj=5) 
 
 # Fitbit - HR.1min (6,986,307 epochs from 93 participants)
-HR.1min <- multidata.read(data.path="DATA/Fitbit HR (1min)",idChar=c(1,6),groupChar=c(8,11),nSubj=3)
+HR.1min <- multidata.read(data.path="DATA/Fitbit HR (1min)",idChar=c(1,6),groupChar=c(8,11),nSubj=5)
 
 # Survey Sparrow - dailyDiary (5,133 daily responses from 93 participants)
-dailyDiary <- multidata.read(data.path="DATA/Survey Sparrows",idChar=c(1,6),nSubj=3,surveySparrow=TRUE)
+dailyDiary <- multidata.read(data.path="DATA/Survey Sparrows",idChar=c(1,6),nSubj=5,surveySparrow=TRUE)
 ```
 
 <br>
@@ -225,7 +225,7 @@ The `timeCheck` function is used to check whether the temporal coordinates of th
 #' @param output.dayFormat = character string indicating the desired format of the 'day' variable (default: "%Y-%m-%d"). See ?strptime for details
 #' @param output.hourFormat = character string indicating the desired format of the 'hour' variable (defualt: "%m/%d/%Y %H:%M"). See ?strptime for details
 timeCheck <- function(data,ID="ID",day="ActivityDate",hour=NA,returnInfo=FALSE,printInfo=TRUE,
-                      input.dayFormat="%m/%d/%Y",output.dayFormat="%Y-%m-%d",output.hourFormat="%m/%d/%Y %H:%M",
+                      input.dayFormat="%m/%d/%Y",output.dayFormat="%Y-%m-%d",output.hourFormat="%m/%d/%Y %H:%M %p",
                       add30=FALSE,LogId=NA,day.withinNight=FALSE){ 
   require(ggplot2); require(gridExtra) # required packages for data visualization
  
@@ -384,7 +384,7 @@ save(dailyAct,file="DATA/datasets/dailyAct_timeProcessed.RData")
 ```{r }
 # recoding day and hour, and checking time and missing data points
 hourlySteps <-  timeCheck(data=hourlySteps,ID="ID",day="ActivityDate",hour="ActivityHour",
-                          input.dayFormat="%m/%d/%Y",output.dayFormat="%Y-%m-%d",output.hourFormat="%m/%d/%Y %H:%M")
+                          input.dayFormat="%m/%d/%Y",output.dayFormat="%Y-%m-%d",output.hourFormat="%m/%d/%Y %H:%M:%S %p")
 ```
 
 *Comments:*
@@ -444,7 +444,7 @@ sleepLog$StartTime <- sleepLog$StartTime2 # updating StartTime
 
 # recoding day and hour, and checking time and missing data points
 p <-  timeCheck(data=sleepLog,ID="ID",day="ActivityDate",hour="StartTime",
-                input.dayFormat="%m/%d/%Y",output.dayFormat="%Y-%m-%d",output.hourFormat="%m/%d/%Y %H:%M")
+                input.dayFormat="%m/%d/%Y",output.dayFormat="%Y-%m-%d",output.hourFormat="%m/%d/%Y %H:%M:%S %p")
 ```
 
 <br>
@@ -463,7 +463,7 @@ p <-  timeCheck(data=sleepLog,ID="ID",day="ActivityDate",hour="StartTime",
 ```{r message=FALSE,fig.width=10,fig.height=4}
 (sleepLog_compliance <-  
   timeCheck(data=sleepLog,ID="ID",day="ActivityDate",hour="StartTime",returnInfo=TRUE,printInfo=FALSE,
-            input.dayFormat="%m/%d/%Y",output.dayFormat="%Y-%m-%d",output.hourFormat="%m/%d/%Y %H:%M"))
+            input.dayFormat="%m/%d/%Y",output.dayFormat="%Y-%m-%d",output.hourFormat="%m/%d/%Y %H:%M:%S %p"))
 
 # plotting missing days
 par(mfrow=c(1,2))
@@ -1180,7 +1180,7 @@ save(sleepLog,file="DATA/datasets/sleepLog_combined.RData") # saving combined da
 Here, we recode the `Time` variable (i.e., the "Date and time within a defined sleep period in mm/dd/yy hh:mm:ss format"), based on which the `ActivityDate` variable is computed. To change the resolution from minutes (as exported from [Fitabase](https://www.fitabase.com/media/1930/fitabasedatadictionary102320.pdf)) to seconds, we use argument `add30` of the `timeCheck` function, which adds 30 seconds to each other epoch within the same LOG. Moreover, the `day.withinNight` argument is used to keep the same `ActivityDate` value for those epochs recorded before and after midnight, within the same `LogId`.
 ```{r }
 p <- timeCheck(data=sleepEBE,ID="ID",day="ActivityDate",hour="Time",
-               input.dayFormat="%m/%d/%Y",output.dayFormat="%Y-%m-%d",output.hourFormat="%m/%d/%Y %H:%M",
+               input.dayFormat="%m/%d/%Y",output.dayFormat="%Y-%m-%d",output.hourFormat="%m/%d/%Y %H:%M:%S %p",
                add30=TRUE,LogId="LogId",day.withinNight=TRUE)
 ```
 
@@ -1388,7 +1388,7 @@ sleep period in mm/dd/yy hh:mm:ss format"), based on which the `ActivityDate` va
 colnames(classicEBE)[which(colnames(classicEBE)=="date")] <- "Time"
 colnames(classicEBE)[colnames(classicEBE)=="logId"] <- "LogId"
 p <- timeCheck(data=classicEBE,ID="ID",day="ActivityDate",hour="Time",
-               input.dayFormat="%m/%d/%Y",output.dayFormat="%Y-%m-%d",output.hourFormat="%m/%d/%Y %H:%M",
+               input.dayFormat="%m/%d/%Y",output.dayFormat="%Y-%m-%d",output.hourFormat="%m/%d/%Y %H:%M:%S %p",
                day.withinNight=TRUE,LogId="LogId")
 
 ```
@@ -1703,7 +1703,7 @@ HR.1min$time2 <- NULL
 
 # recoding day and hour, and checking time and missing data points
 p <- timeCheck(data=HR.1min,ID="ID",day="ActivityDate",hour="Time",
-               input.dayFormat="%m/%d/%Y",output.dayFormat="%Y-%m-%d",output.hourFormat="%m/%d/%Y %H:%M")
+               input.dayFormat="%m/%d/%Y",output.dayFormat="%Y-%m-%d",output.hourFormat="%m/%d/%Y %H:%M:%S %p")
 ```
 
 <br>
@@ -2391,12 +2391,9 @@ dailyDiary$dailyStress <- as.numeric(gsub("Not at all stressful","0",
                                                          gsub("Extremely stressful","4",
                                                               dailyDiary$dailyStress))))))
 # converting dailyStress sources as binary (0/1)
-for(Var in colnames(dailyDiary)[which(substr(colnames(dailyDiary),1,7)=="stress_")]){
-  colnames(dailyDiary)[which(colnames(dailyDiary)==Var)] <- "var"
-  dailyDiary[!is.na(dailyDiary$var) & dailyDiary$var=="","var"] <- "0"
-  dailyDiary[!is.na(dailyDiary$var) & dailyDiary$var!="0","var"] <- "1"
-  dailyDiary$var <- as.numeric(dailyDiary$var)
-  colnames(dailyDiary)[which(colnames(dailyDiary)=="var")] <- Var }
+
+dailyDiary <- dailyDiary %>%
+  dplyr::mutate(across(starts_with("stress_"), ~ifelse(is.na(.), 0, ifelse(. == "Unchecked", 0, 1)))) 
 
 # sanity check: 4 cases with dailyStress = 1 but stressor specification (?)
 dailyDiary$stress_total <- rowSums(dailyDiary[,which(substr(colnames(dailyDiary),1,7)=="stress_")],na.rm=TRUE) # stress_total
@@ -2452,12 +2449,8 @@ dailyDiary$eveningWorry <- as.numeric(gsub("Not at all worried","0",
                                                          gsub("Extremely worried","4",
                                                               dailyDiary$eveningWorry))))))
 # converting eveningWorry sources as binary (0/1)
-for(Var in colnames(dailyDiary)[which(substr(colnames(dailyDiary),1,6)=="worry_")]){
-  colnames(dailyDiary)[which(colnames(dailyDiary)==Var)] <- "var"
-  dailyDiary[!is.na(dailyDiary$var) & dailyDiary$var=="","var"] <- "0"
-  dailyDiary[!is.na(dailyDiary$var) & dailyDiary$var!="0","var"] <- "1"
-  dailyDiary$var <- as.numeric(dailyDiary$var)
-  colnames(dailyDiary)[which(colnames(dailyDiary)=="var")] <- Var }
+dailyDiary <- dailyDiary %>%
+  dplyr::mutate(across(starts_with("worry_"), ~ifelse(is.na(.), 0, ifelse(. == "Unchecked", 0, 1)))) 
 
 # sanity check: 1 case with eveningWorry = 1 but worry specification (?)
 dailyDiary$worry_total <- rowSums(dailyDiary[,which(substr(colnames(dailyDiary),1,6)=="worry_")],na.rm=TRUE) # worry_total
@@ -2541,19 +2534,23 @@ save(dailyDiary,file="DATA/datasets/dailyDiary_recoded.RData")
 
 From `demos`, we keep the participant's identifier, sex, age, BMI, and insomnia group, with sex and insomnia group being recoded as factor.
 ```{r fig.width=10,fig.height=4}
-demos <- read.csv("~/Documents/INSA-home/Appendix B - Data pre-processing/DATA/demographics.csv",header=TRUE) # demos
+library(readr)
+
+demos <- read.csv("~/Documents/INSA-home/Appendix B - Data pre-processing/DATA/demographics.csv") # demos
 
 # recoding participants' identifier
 demos$ID <- as.factor(demos$ID)
+demos$sex <- as.character(demos$sex)
+
 
 # changing variable classes
-demos$sex <- gsub("0","F",gsub("1","M",demos$sex))
+demos$sex <- gsub("0","Female",gsub("1","Male",demos$sex))
 demos[,c("sex","insomnia","insomnia.group")] <- 
   lapply(demos[,c("sex","insomnia","insomnia.group")],as.factor)
 demos[,c("age","BMI")] <- lapply(demos[,c("age","BMI")],as.numeric) 
 
 # sorting variables and removing unuseful columns
-demos <- demos[,c("ID","sex","age","BMI","insomnia","insomnia.group")] # sorting columns
+#demos <- demos[,c("ID","sex","age","BMI","insomnia","insomnia.group")] # sorting columns
 
 # plotting variables
 par(mfrow=c(2,3)) 
@@ -2566,10 +2563,10 @@ for(Var in c(colnames(demos)[2:6])){
 Then, we recode the insomnia group variables in order to compute the `insomnia.group` variable accounting for both the `DSMinsomnia` (i.e., 1 if case of insomnia based on DSM criteria) and the `sub.insomnia` variable (i.e., 1 if case meeting all but one DSM criteria; note that `sub.insomnia` have missing values when `DSMinsomnia` = 1).
 ```{r fig.width=10,fig.height=3}
 # creating insomnia.group variable
-demos$insomnia.group <- "control" # creating insomnia.group = control vs. sub.insomnia vs. DSM.insomnia
-demos[!is.na(demos$sub_insomnia) & demos$sub_insomnia==1,"insomnia.group"] <- "sub.ins" # sub.ins when sub_insomnia = 1
-demos[demos$DSMinsomnia==1,"insomnia.group"] <- "DSM.ins" # DSM.ins when DSMinsomnia = 1
-demos$DSMinsomnia <- demos$sub_insomnia <- NULL # removing unecessary variables
+demos = demos %>%
+  dplyr::mutate(insomnia.group = ifelse(!is.na(sub_insomnia) & sub_insomnia==1, "sub.ins", "control")) # sub.ins when sub_insomnia = 1
+#demos[demos$DSMinsomnia==1,"insomnia.group"] <- "DSM.ins" # DSM.ins when DSMinsomnia = 1
+#demos$DSMinsomnia <- demos$sub_insomnia <- NULL # removing unecessary variables
 demos$insomnia.group <- as.factor(demos$insomnia.group)
 
 # plotting
@@ -5114,10 +5111,12 @@ hist(compliance$nSleep_clean,breaks=50,main="No. of nonmissing sleep periods per
 Finally, we summarize the **No. and % of `sleepLog` cases with sleep stage data**.
 ```{r fig.width=11,fig.height=3}
 # computing No. of cases with nonmissing sleep stage data
-for(i in 1:nrow(compliance)){
-  compliance[i,"nSleepStage_clean"] <- 
-    nlevels(as.factor(as.character(Nsleep[as.character(Nsleep$ID)==compliance[i,"ID"] & 
-                                            !is.na(Nsleep$light),"IDday"])))  }
+library(dplyr)
+
+compliance <- compliance %>%
+  mutate(nSleepStage_clean = sapply(ID, function(id) {
+    nlevels(factor(Nsleep[as.character(Nsleep$ID) == id & !is.na(Nsleep$light), "IDday"]))
+  }))
 
 # printing compliance info
 cat("\n\nsleepLog data (nonmissing sleep stages):\n- 'Cleaned' No. days/participants =",
@@ -5152,10 +5151,10 @@ hist(compliance$nSleepStage_clean,breaks=50,main="No. of nonmissing sleep stage 
 Here, we summarize the **No. and % of `sleepLog` cases with sleep-related HR data**.
 ```{r fig.width=11,fig.height=3}
 # computing No. of cases with nonmissing sleep stage data
-for(i in 1:nrow(compliance)){
-  compliance[i,"nSleepHR"] <- 
-    nlevels(as.factor(as.character(Nsleep[as.character(Nsleep$ID)==compliance[i,"ID"] & 
-                                            !is.na(Nsleep$stageHR_NREM),"IDday"])))  }
+compliance <- compliance %>%
+  mutate(nSleepHR = sapply(ID, function(id) {
+    nlevels(factor(Nsleep[as.character(Nsleep$ID) == id & !is.na(Nsleep$stageHR_NREM), "IDday"]))
+  }))
 
 # printing compliance info
 cat("\n\nsleepLog data (nonmissing TST-related HR):\n- 'Cleaned' No. days/participants =",
@@ -5394,34 +5393,39 @@ cat("stageHR_REM: Total No. of excluded cases =",nrow(memory[!is.na(memory$stage
 
 Here, compute the updated information on the nonmissing data related to `sleepHR` variables.
 ```{r fig.width=11,fig.height=3}
-for(i in 1:length(sleepHRVars)){ 
-  
-  # updating compliance dataset
-  colnames(ema)[which(colnames(ema)==sleepHRVars[i])] <- "sleepHR"
-  NsleepHR <- ema[!is.na(ema$sleepHR),]
-  
-  # computing compliance_clean (reference: 60 days)
-  for(j in 1:nrow(compliance)){
-    compliance[j,"sleepHR"] <- 
-      nlevels(as.factor(as.character(NsleepHR[as.character(NsleepHR$ID)==compliance[j,"ID"] &
-                                                !is.na(NsleepHR$sleepHR),"IDday"])))  }
-  
-  # printing compliance info
-  cat("\n\n",sleepHRVars[i],":\n- 'Cleaned' No. days/participants =",
-    round(mean(compliance$sleepHR),2)," ( SD =",round(sd(compliance$sleepHR),2),
-    ") \n- compliance =",
-    round(mean(100*compliance$sleepHR/60),2),"% ( SD =",
-    round(sd(100*compliance$sleepHR/60),2),
-    ") \n- non missing",sleepHRVars[i],"/Total No. 'clean' sleepLog cases =",
-    round(mean(100*compliance$sleepHR/compliance$nSleep_clean),2),
-    "% ( SD =",round(sd(100*compliance$sleepHR/compliance$nSleep_clean),2),")")
-  
-  # plotting No. of cases
-  hist(compliance$sleepHR,breaks=50,main=paste("No. of nonmissing",sleepHRVars[i],"values per participant"),xlab="")
-  
-  # back to original variable name
-  colnames(ema)[which(colnames(ema)=="sleepHR")] <- sleepHRVars[i]
-  colnames(compliance)[which(colnames(compliance)=="sleepHR")] <- paste("n",sleepHRVars[i],"_clean",sep="") }
+
+for (sleepHRVar in sleepHRVars) {
+  # Updating compliance dataset
+  ema <- ema %>%
+    rename_with(~ "sleepHR", sleepHRVar)
+
+  # Computing compliance_clean (reference: 60 days)
+  compliance[[sleepHRVar]] <- ema %>%
+    filter(!is.na(sleepHR)) %>%
+    group_by(ID) %>%
+    summarize(nSleepHR = n_distinct(IDday)) %>%
+    pull(nSleepHR)
+
+  # Printing compliance info
+  cat("\n\n", sleepHRVar, ":\n- 'Cleaned' No. days/participants =",
+      round(mean(compliance[[sleepHRVar]]), 2), " ( SD =", round(sd(compliance[[sleepHRVar]]), 2),
+      ") \n- compliance =", round(mean(100 * compliance[[sleepHRVar]] / 60), 2), "% ( SD =",
+      round(sd(100 * compliance[[sleepHRVar]] / 60), 2),
+      ") \n- non-missing", sleepHRVar, "/Total No. 'clean' sleepLog cases =",
+      round(mean(100 * compliance[[sleepHRVar]] / compliance$nSleep_clean), 2),
+      "% ( SD =", round(sd(100 * compliance[[sleepHRVar]] / compliance$nSleep_clean), 2), ")")
+
+  # Plotting No. of cases
+  hist(compliance[[sleepHRVar]], breaks = 50,
+       main = paste("No. of nonmissing", sleepHRVar, "values per participant"), xlab = "")
+
+  # Back to the original variable name
+  ema <- ema %>%
+    rename_with(~ sleepHRVar, all_of("sleepHR"))
+
+  colnames(compliance)[which(colnames(compliance) == sleepHRVar)] <- paste("n", sleepHRVar, "_clean", sep = "")
+}
+
 ```
 
 <br>
@@ -5450,13 +5454,15 @@ cat(nrow(ema[!is.na(ema$TotalSteps),]),"nonmissing cases of dailyAct data") # 6,
 For estimating compliance, we compute the ratio between the **No. of nonmissing days per each participant** by the length of the recording periods originally required by the study, that is **two months (60 days)**.
 ```{r fig.width=11,fig.height=3}
 # computing No. of cases with nonmissing dailyAct data
-for(i in 1:nrow(compliance)){
-  compliance[i,"ndailyAct"] <- 
-    nlevels(as.factor(as.character(ema[as.character(ema$ID)==compliance[i,"ID"] & 
-                                         !is.na(ema$TotalSteps),"IDday"])))
-   compliance[i,"ndailyAct_sleep"] <- 
-    nlevels(as.factor(as.character(ema[as.character(ema$ID)==compliance[i,"ID"] & 
-                                         !is.na(ema$TIB) & !is.na(ema$TotalSteps),"IDday"]))) }
+
+
+compliance <- compliance %>%
+  mutate(ndailyAct = sapply(compliance$ID, function(id) {
+    nlevels(factor(ema[as.character(ema$ID) == id & !is.na(ema$TotalSteps), "IDday"]))
+  })) %>%
+    mutate(ndailyAct_sleep = sapply(compliance$ID, function(id){ 
+    nlevels(as.factor(as.character(ema[(ema$ID)== id  & !is.na(ema$TIB) & !is.na(ema$TotalSteps),"IDday"])))
+  }))
 
 # printing compliance info
 cat("\n\ndailyAct data:\n- Original No. days/participants =",
@@ -5902,16 +5908,21 @@ cat(nrow(ema[!is.na(ema$TotalSteps),]),"'cleaned' cases of dailyAct data") # 4,6
 
 Here, compute the updated information on the nonmissing data related to `dailyAct` variables.
 ```{r fig.width=11,fig.height=3}
+library(dplyr)
 # updating compliance dataset
 Nact <- ema[!is.na(ema$TotalSteps),]
 
 # computing compliance_clean (reference: 60 days)
-for(i in 1:nrow(compliance)){
-  compliance[i,"ndailyAct_clean"] <- 
-    nlevels(as.factor(as.character(Nact[as.character(Nact$ID)==compliance[i,"ID"],"IDday"]))) 
-  compliance[i,"ndailyAct_sleep_clean"] <- 
-    nlevels(as.factor(as.character(Nact[as.character(Nact$ID)==compliance[i,"ID"] & 
-                                          !is.na(Nact$TIB) & !is.na(Nact$TotalSteps),"IDday"]))) }
+
+
+compliance <- compliance %>%
+  mutate(ndailyAct_clean = sapply(compliance$ID, function(id){ 
+    nlevels(as.factor(as.character(Nact[as.character(Nact$ID)==id,"IDday"])))})) %>% 
+  mutate(ndailyAct_sleep_clean = sapply(compliance$ID, function(id){ 
+    nlevels(as.factor(as.character(Nact[as.character(Nact$ID)==id & 
+                                          !is.na(Nact$TIB) & !is.na(Nact$TotalSteps),"IDday"])))}))
+
+
 compliance$compl.act_clean <- 100*compliance$ndailyAct_clean/60 # % of days on two months
 
 # printing compliance info
