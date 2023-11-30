@@ -143,8 +143,8 @@ grid.arrange(ggplot(ema,aes(light))+geom_histogram(),ggplot(ema,aes(light.p))+ge
 Here, we recode the variables `SO` and `WakeUp` as numeric, indicating their relative **distance in hours from midnight**. Positive values will reflect hours after midnight, whereas negative values will reflect hours before midnight.
 ```{r fig.width=10,fig.height=4,warning=FALSE,message=FALSE}
 # isolating hour from date
-ema$SO.num <- as.POSIXct(paste(hour(ema$SO),minute(ema$SO)),format="%H %M") 
-ema$WakeUp.num <- as.POSIXct(paste(hour(ema$WakeUp),minute(ema$WakeUp)),format="%H %M")
+ema$SO.num <- as.POSIXct(paste(hour(ema$SO),minute(ema$SO)),format="%H %M",tz="GMT") 
+ema$WakeUp.num <- as.POSIXct(paste(hour(ema$WakeUp),minute(ema$WakeUp)),format="%H %M",tz="GMT")
 
 # sorting dataset columns
 AD <- which(colnames(ema)=="midSleep")
@@ -155,6 +155,7 @@ ema$SO.num <- as.numeric(difftime(ema$SO.num,
                                   as.POSIXct(paste(substr(Sys.time(),1,10),"00:00:00"),tz="GMT"),units="hours"))
 ema$WakeUp.num <- as.numeric(difftime(ema$WakeUp.num,
                                       as.POSIXct(paste(substr(Sys.time(),1,10),"00:00:00"),tz="GMT"),units="hours"))
+
 
 # subtracting 24h to cases with values before midnight (i.e., so that positive = after, and negative = before)
 ema[!is.na(ema$SO.num) & ema$SO.num>15,"SO.num"] <- 
@@ -1397,55 +1398,55 @@ Here, we use the `multidesc` function for computing the descriptive statistics (
 multidesc <- function(long,wide,cluster="S.ID",lv1,lv2,group,group.labels=NA){ require(Rmisc); require(lme4)
   
   out <- data.frame(Measure=lv1[1],
-                    N=summarySE(long,lv1[1],na.rm=TRUE)[,2],
-                    Mean=paste(round(summarySE(long,lv1[1],na.rm=TRUE)[,3],2)," (",
-                               round(summarySE(long,lv1[1],na.rm=TRUE)[,4],2),")",sep=""))
+                    N=Rmisc::summarySE(long,lv1[1],na.rm=TRUE)[,2],
+                    Mean=paste(round(Rmisc::summarySE(long,lv1[1],na.rm=TRUE)[,3],2)," (",
+                               round(Rmisc::summarySE(long,lv1[1],na.rm=TRUE)[,4],2),")",sep=""))
   if(!is.na(group)){
     colnames(long)[which(colnames(long)==group)] <- colnames(wide)[which(colnames(wide)==group)] <- "group"
     long$group <- as.factor(as.character(long$group))
     wide$group <- as.factor(as.character(wide$group))
     groups <- levels(long$group)
-    out$Mean1 = paste(round(summarySE(long[long$group==groups[1],],lv1[1],na.rm=TRUE)[,3],2)," (",
-                      round(summarySE(long[long$group==groups[1],],lv1[1],na.rm=TRUE)[,4],2),")",sep="")
-    out$Mean2 = paste(round(summarySE(long[long$group==groups[2],],lv1[1],na.rm=TRUE)[,3],2)," (",
-                      round(summarySE(long[long$group==groups[2],],lv1[1],na.rm=TRUE)[,4],2),")",sep="") }
+    out$Mean1 = paste(round(Rmisc::summarySE(long[long$group==groups[1],],lv1[1],na.rm=TRUE)[,3],2)," (",
+                      round(Rmisc::summarySE(long[long$group==groups[1],],lv1[1],na.rm=TRUE)[,4],2),")",sep="")
+    out$Mean2 = paste(round(Rmisc::summarySE(long[long$group==groups[2],],lv1[1],na.rm=TRUE)[,3],2)," (",
+                      round(Rmisc::summarySE(long[long$group==groups[2],],lv1[1],na.rm=TRUE)[,4],2),")",sep="") }
   
   for(i in 2:length(lv1)){
     if(!is.na(group)){
       out <- rbind(out,
                  data.frame(Measure=lv1[i],
-                            N=summarySE(long,lv1[i],na.rm=TRUE)[,2],
-                            Mean=paste(round(summarySE(long,lv1[i],na.rm=TRUE)[,3],2)," (",
-                                       round(summarySE(long,lv1[i],na.rm=TRUE)[,4],2),")",sep=""),
-                            Mean1=paste(round(summarySE(long[long$group==groups[1],],lv1[i],na.rm=TRUE)[,3],2)," (",
-                                        round(summarySE(long[long$group==groups[1],],lv1[i],na.rm=TRUE)[,4],2),")",sep=""),
-                            Mean2=paste(round(summarySE(long[long$group==groups[2],],lv1[i],na.rm=TRUE)[,3],2)," (",
-                                        round(summarySE(long[long$group==groups[2],],lv1[i],na.rm=TRUE)[,4],2),")",sep="")))
+                            N=Rmisc::summarySE(long,lv1[i],na.rm=TRUE)[,2],
+                            Mean=paste(round(Rmisc::summarySE(long,lv1[i],na.rm=TRUE)[,3],2)," (",
+                                       round(Rmisc::summarySE(long,lv1[i],na.rm=TRUE)[,4],2),")",sep=""),
+                            Mean1=paste(round(Rmisc::summarySE(long[long$group==groups[1],],lv1[i],na.rm=TRUE)[,3],2)," (",
+                                        round(Rmisc::summarySE(long[long$group==groups[1],],lv1[i],na.rm=TRUE)[,4],2),")",sep=""),
+                            Mean2=paste(round(Rmisc::summarySE(long[long$group==groups[2],],lv1[i],na.rm=TRUE)[,3],2)," (",
+                                        round(Rmisc::summarySE(long[long$group==groups[2],],lv1[i],na.rm=TRUE)[,4],2),")",sep="")))
     } else {
       out <- rbind(out,
                  data.frame(Measure=lv1[i],
-                            N=summarySE(long,lv1[i],na.rm=TRUE)[,2],
-                            Mean=paste(round(summarySE(long,lv1[i],na.rm=TRUE)[,3],2)," (",
-                                       round(summarySE(long,lv1[i],na.rm=TRUE)[,4],2),")",sep=""))) }}
+                            N=Rmisc::summarySE(long,lv1[i],na.rm=TRUE)[,2],
+                            Mean=paste(round(Rmisc::summarySE(long,lv1[i],na.rm=TRUE)[,3],2)," (",
+                                       round(Rmisc::summarySE(long,lv1[i],na.rm=TRUE)[,4],2),")",sep=""))) }}
   
   # demos data
   for(i in 1:length(lv2)){
     if(!is.na(group)){
       out <- rbind(out,
                    data.frame(Measure=lv2[i],
-                              N=summarySE(wide,lv2[i],na.rm=TRUE)[,2],
-                              Mean=paste(round(summarySE(wide,lv2[i],na.rm=TRUE)[,3],2)," (",
-                                         round(summarySE(wide,lv2[i],na.rm=TRUE)[,4],2),")",sep=""),
-                              Mean1=paste(round(summarySE(wide[wide$group==groups[1],],lv2[i],na.rm=TRUE)[,3],2)," (",
-                                          round(summarySE(wide[wide$group==groups[1],],lv2[i],na.rm=TRUE)[,4],2),")",sep=""),
-                              Mean2=paste(round(summarySE(wide[wide$group==groups[2],],lv2[i],na.rm=TRUE)[,3],2)," (",
-                                          round(summarySE(wide[wide$group==groups[2],],lv2[i],na.rm=TRUE)[,4],2),")",sep="")))
+                              N=Rmisc::summarySE(wide,lv2[i],na.rm=TRUE)[,2],
+                              Mean=paste(round(Rmisc::summarySE(wide,lv2[i],na.rm=TRUE)[,3],2)," (",
+                                         round(Rmisc::summarySE(wide,lv2[i],na.rm=TRUE)[,4],2),")",sep=""),
+                              Mean1=paste(round(Rmisc::summarySE(wide[wide$group==groups[1],],lv2[i],na.rm=TRUE)[,3],2)," (",
+                                          round(Rmisc::summarySE(wide[wide$group==groups[1],],lv2[i],na.rm=TRUE)[,4],2),")",sep=""),
+                              Mean2=paste(round(Rmisc::summarySE(wide[wide$group==groups[2],],lv2[i],na.rm=TRUE)[,3],2)," (",
+                                          round(Rmisc::summarySE(wide[wide$group==groups[2],],lv2[i],na.rm=TRUE)[,4],2),")",sep="")))
     } else {
       out <- rbind(out,
                  data.frame(Measure=lv2[i],
-                            N=summarySE(wide,lv2[i],na.rm=TRUE)[,2],
-                            Mean=paste(round(summarySE(wide,lv2[i],na.rm=TRUE)[,3],2)," (",
-                                       round(summarySE(wide,lv2[i],na.rm=TRUE)[,4],2),")",sep=""))) }}
+                            N=Rmisc::summarySE(wide,lv2[i],na.rm=TRUE)[,2],
+                            Mean=paste(round(Rmisc::summarySE(wide,lv2[i],na.rm=TRUE)[,3],2)," (",
+                                       round(Rmisc::summarySE(wide,lv2[i],na.rm=TRUE)[,4],2),")",sep=""))) }}
   
   # ICC
   out$ICC <- NA
@@ -1454,7 +1455,7 @@ multidesc <- function(long,wide,cluster="S.ID",lv1,lv2,group,group.labels=NA){ r
     out[out$Measure==lv1[i],"ICC"] <- round(as.data.frame(lme4::VarCorr(m))[1,4]/
                                               (as.data.frame(lme4::VarCorr(m))[1,4]+as.data.frame(lme4::VarCorr(m))[2,4]),2)}
   rownames(out) <- gsub(".cm","",rownames(out))
-  if(!is.na(group)){ if(!is.na(group.labels)){
+  if(!is.na(group)){ if(!all(is.na(group.labels))){
     colnames(out)[c(which(colnames(out)=="Mean1"),which(colnames(out)=="Mean2"))] <- group.labels 
     } else{ colnames(out)[c(which(colnames(out)=="Mean1"),which(colnames(out)=="Mean2"))] <-  levels(long$group)  }}
   return(out)}
@@ -1504,7 +1505,7 @@ multicorr <- function(long,wide,lv1,lv2,cluster="ID"){ require(Hmisc); require(R
   
   # individual means (lv2) of lv1 variables
   for(VAR in lv1){
-    wide <- cbind(wide,newVar=summarySE(long,VAR,"ID",na.rm=TRUE)[,3])
+    wide <- cbind(wide,newVar=Rmisc::summarySE(long,VAR,"ID",na.rm=TRUE)[,3])
     colnames(wide)[which(colnames(wide)=="newVar")] <- paste(VAR,".cm",sep="") }
   
   # joining individual means (lv2) to the long dataset
@@ -1710,7 +1711,7 @@ for(Var in d.ratings){ hist(ema[,Var],main=Var,xlab="",breaks=30) }
 Here, we visualize the distributions of the **aggregated scores** and that of the **factor scores** predicted by the configural invariance MCFA model selected above.
 ```{r fig.width=10,fig.height=6,message=FALSE,warning=FALSE,error =T}
 # mean centering PsyDist
-demos$PsyDist.cm <- summarySE(ema,measurevar="PsyDist",groupvars="ID",na.rm=TRUE)[,3]
+demos$PsyDist.cm <- Rmisc::summarySE(ema,measurevar="PsyDist",groupvars="ID",na.rm=TRUE)[,3]
 ema <- plyr::join(ema,demos[,c("ID","PsyDist.cm")],by="ID",type="left")
 ema$PsyDist.mc <- ema$PsyDist - ema$PsyDist.cm
 
@@ -2373,10 +2374,10 @@ grid.arrange(ggplot(ema[!is.na(ema$stress),],aes(x=as.factor(stress))) + geom_hi
              ggplot(ema,aes(stress,fill=insomnia.group)) +  geom_histogram(position=position_dodge(0.5)),nrow=2)
 
 # computing mean and SD in the sample and by group
-summarySE(ema,measurevar="stress",na.rm=TRUE)[,1:4] # stress in the sample
-summarySE(ema,measurevar="stress",groupvars="sex",na.rm=TRUE)[,1:4] # stress by sex
-summarySE(ema,measurevar="stress",groupvars="insomnia",na.rm=TRUE)[,1:4] # stress by insomnia
-summarySE(ema,measurevar="stress",groupvars="insomnia.group",na.rm=TRUE)[,1:4] # stress by insomnia.group
+Rmisc::summarySE(ema,measurevar="stress",na.rm=TRUE)[,1:4] # stress in the sample
+Rmisc::summarySE(ema,measurevar="stress",groupvars="sex",na.rm=TRUE)[,1:4] # stress by sex
+Rmisc::summarySE(ema,measurevar="stress",groupvars="insomnia",na.rm=TRUE)[,1:4] # stress by insomnia
+Rmisc::summarySE(ema,measurevar="stress",groupvars="insomnia.group",na.rm=TRUE)[,1:4] # stress by insomnia.group
 
 # very or extremely stressful
 ema[!is.na(ema$stress) & ema$stress<4,"stress.VE"] <- 0
@@ -2493,10 +2494,10 @@ grid.arrange(ggplot(ema[!is.na(ema$worry),],aes(x=as.factor(worry))) + geom_hist
              ggplot(ema,aes(worry,fill=insomnia.group)) +  geom_histogram(position=position_dodge(0.5)),nrow=2)
 
 # computing mean and SD in the sample and by group
-summarySE(ema,measurevar="worry",na.rm=TRUE)[,1:4] # worry in the sample
-summarySE(ema,measurevar="worry",groupvars="sex",na.rm=TRUE)[,1:4] # worry by sex
-summarySE(ema,measurevar="worry",groupvars="insomnia",na.rm=TRUE)[,1:4] # worry by insomnia
-summarySE(ema,measurevar="worry",groupvars="insomnia.group",na.rm=TRUE)[,1:4] # worry by insomnia.group
+Rmisc::summarySE(ema,measurevar="worry",na.rm=TRUE)[,1:4] # worry in the sample
+Rmisc::summarySE(ema,measurevar="worry",groupvars="sex",na.rm=TRUE)[,1:4] # worry by sex
+Rmisc::summarySE(ema,measurevar="worry",groupvars="insomnia",na.rm=TRUE)[,1:4] # worry by insomnia
+Rmisc::summarySE(ema,measurevar="worry",groupvars="insomnia.group",na.rm=TRUE)[,1:4] # worry by insomnia.group
 
 # very or extremely stressful
 ema[!is.na(ema$worry) & ema$worry<4,"worry.VE"] <- 0
@@ -2662,10 +2663,10 @@ grid.arrange(ggplot(ema[!is.na(ema$mood),],aes(x=as.factor(mood))) + geom_histog
              ggplot(ema,aes(mood,fill=insomnia.group)) +  geom_histogram(position=position_dodge(0.5)),nrow=2)
 
 # computing mean and SD in the sample and by group
-summarySE(ema,measurevar="mood",na.rm=TRUE)[,1:4] # mood in the sample
-summarySE(ema,measurevar="mood",groupvars="sex",na.rm=TRUE)[,1:4] # mood by sex
-summarySE(ema,measurevar="mood",groupvars="insomnia",na.rm=TRUE)[,1:4] # mood by insomnia
-summarySE(ema,measurevar="mood",groupvars="insomnia.group",na.rm=TRUE)[,1:4] # mood by insomnia.group
+Rmisc::summarySE(ema,measurevar="mood",na.rm=TRUE)[,1:4] # mood in the sample
+Rmisc::summarySE(ema,measurevar="mood",groupvars="sex",na.rm=TRUE)[,1:4] # mood by sex
+Rmisc::summarySE(ema,measurevar="mood",groupvars="insomnia",na.rm=TRUE)[,1:4] # mood by insomnia
+Rmisc::summarySE(ema,measurevar="mood",groupvars="insomnia.group",na.rm=TRUE)[,1:4] # mood by insomnia.group
 
 # somehow bad/bad mood
 ema[!is.na(ema$mood) & ema$mood<4,"mood.VE"] <- 0
