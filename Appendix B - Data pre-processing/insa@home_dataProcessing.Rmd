@@ -384,7 +384,7 @@ save(dailyAct,file="DATA/datasets/dailyAct_timeProcessed.RData")
 ```{r }
 # recoding day and hour, and checking time and missing data points
 hourlySteps <-  timeCheck(data=hourlySteps,ID="ID",day="ActivityDate",hour="ActivityHour",
-                          input.dayFormat="%m/%d/%Y",output.dayFormat="%Y-%m-%d",output.hourFormat="%m/%d/%Y %H:%M:%S %p")
+                          input.dayFormat="%m/%d/%Y",output.dayFormat="%Y-%m-%d",output.hourFormat="%m/%d/%Y %I:%M:%S %p")
 ```
 
 *Comments:*
@@ -433,7 +433,7 @@ save(hourlySteps,file="DATA/datasets/hourlySteps_timeProcessed.RData")
 Here, before applying the `timeCheck` function, we need standardize the format of this variable (i.e., sometimes encoded with the "PM"/"AM" specification, and sometimes not).
 ```{r message=FALSE}
 # standardizing StartTime format and converting as POSIXct
-sleepLog$lastTimeChar <- substr(sleepLog$StartTime,nchar(sleepLog$StartTime),nchar(sleepLog$StartTime))
+sleepLog$lastTimeChar <- substr(sleepLog$StartTime,nchar(sleepLog$StartTime),nchar(sleepLog$StartTime)+1)
 sleepLog[sleepLog$lastTimeChar=="M","StartTime2"] <-
   as.POSIXct(sleepLog[sleepLog$lastTimeChar=="M","StartTime"],format="%m/%d/%Y %I:%M:%S %p",tz="GMT") # AM/PM specification
 sleepLog[sleepLog$lastTimeChar!="M","StartTime2"] <-
@@ -444,7 +444,7 @@ sleepLog$StartTime <- sleepLog$StartTime2 # updating StartTime
 
 # recoding day and hour, and checking time and missing data points
 p <-  timeCheck(data=sleepLog,ID="ID",day="ActivityDate",hour="StartTime",
-                input.dayFormat="%m/%d/%Y",output.dayFormat="%Y-%m-%d",output.hourFormat="%m/%d/%Y %H:%M:%S %p")
+                input.dayFormat="%m/%d/%Y",output.dayFormat="%Y-%m-%d",output.hourFormat="%m/%d/%Y %I:%M:%S %p")
 ```
 
 <br>
@@ -463,7 +463,7 @@ p <-  timeCheck(data=sleepLog,ID="ID",day="ActivityDate",hour="StartTime",
 ```{r message=FALSE,fig.width=10,fig.height=4}
 (sleepLog_compliance <-  
   timeCheck(data=sleepLog,ID="ID",day="ActivityDate",hour="StartTime",returnInfo=TRUE,printInfo=FALSE,
-            input.dayFormat="%m/%d/%Y",output.dayFormat="%Y-%m-%d",output.hourFormat="%m/%d/%Y %H:%M:%S %p"))
+            input.dayFormat="%m/%d/%Y",output.dayFormat="%Y-%m-%d",output.hourFormat="%m/%d/%Y %I:%M:%S %p"))
 
 # plotting missing days
 par(mfrow=c(1,2))
@@ -1180,7 +1180,7 @@ save(sleepLog,file="DATA/datasets/sleepLog_combined.RData") # saving combined da
 Here, we recode the `Time` variable (i.e., the "Date and time within a defined sleep period in mm/dd/yy hh:mm:ss format"), based on which the `ActivityDate` variable is computed. To change the resolution from minutes (as exported from [Fitabase](https://www.fitabase.com/media/1930/fitabasedatadictionary102320.pdf)) to seconds, we use argument `add30` of the `timeCheck` function, which adds 30 seconds to each other epoch within the same LOG. Moreover, the `day.withinNight` argument is used to keep the same `ActivityDate` value for those epochs recorded before and after midnight, within the same `LogId`.
 ```{r }
 p <- timeCheck(data=sleepEBE,ID="ID",day="ActivityDate",hour="Time",
-               input.dayFormat="%m/%d/%Y",output.dayFormat="%Y-%m-%d",output.hourFormat="%m/%d/%Y %H:%M:%S %p",
+               input.dayFormat="%m/%d/%Y",output.dayFormat="%Y-%m-%d",output.hourFormat="%m/%d/%Y %I:%M:%S %p",
                add30=TRUE,LogId="LogId",day.withinNight=TRUE)
 ```
 
@@ -1388,7 +1388,7 @@ sleep period in mm/dd/yy hh:mm:ss format"), based on which the `ActivityDate` va
 colnames(classicEBE)[which(colnames(classicEBE)=="date")] <- "Time"
 colnames(classicEBE)[colnames(classicEBE)=="logId"] <- "LogId"
 p <- timeCheck(data=classicEBE,ID="ID",day="ActivityDate",hour="Time",
-               input.dayFormat="%m/%d/%Y",output.dayFormat="%Y-%m-%d",output.hourFormat="%m/%d/%Y %H:%M:%S %p",
+               input.dayFormat="%m/%d/%Y",output.dayFormat="%Y-%m-%d",output.hourFormat="%m/%d/%Y %I:%M:%S %p",
                day.withinNight=TRUE,LogId="LogId")
 
 ```
@@ -1703,7 +1703,7 @@ HR.1min$time2 <- NULL
 
 # recoding day and hour, and checking time and missing data points
 p <- timeCheck(data=HR.1min,ID="ID",day="ActivityDate",hour="Time",
-               input.dayFormat="%m/%d/%Y",output.dayFormat="%Y-%m-%d",output.hourFormat="%m/%d/%Y %H:%M:%S %p")
+               input.dayFormat="%m/%d/%Y",output.dayFormat="%Y-%m-%d",output.hourFormat="%m/%d/%Y %I:%M:%S %p")
 ```
 
 <br>
@@ -3633,9 +3633,11 @@ SOdiffs[,c("ID","StartTime","SO","SOL","SOvsStartTime","SOvsSOL","combined","Min
 
 # plotting EBE data
 par(mfrow=c(2,3))
-for(i in 1:nrow(SOdiffs)){
+if(nrow(SOdiffs) > 0){
+  for(i in 1:nrow(SOdiffs)){
   plot(sleepEBE[sleepEBE$LogId==as.character(SOdiffs[i,"LogId"]),"SleepStage"],xlab="epoch",ylab="sleep stage",pch=20,
        main=SOdiffs[i,"LogId"])}
+}
 ```
 
 <br>
@@ -3842,8 +3844,8 @@ As a further check, we inspect whether **EBE-based** `WASO` corresponds to EBE-b
 sleepLog$WASO_rec <- sleepLog$TIB - sleepLog$SOL - sleepLog$TST
 
 # plotting differences > |0.5| min
-diff <- sleepLog[sleepLog$WASO_rec - sleepLog$WASO > abs(0.5),"WASO_rec"] - 
-  sleepLog[sleepLog$WASO_rec - sleepLog$WASO > abs(0.5),"WASO"]
+diff <- sleepLog[abs(sleepLog$WASO_rec - sleepLog$WASO) > abs(0.5),"WASO_rec"] - 
+  sleepLog[abs(sleepLog$WASO_rec - sleepLog$WASO) > abs(0.5),"WASO"]
 hist(diff,xlab="WASO_rec - WASO",breaks=10,
      main=paste(length(diff),"cases with WASO_rec being 0.5 or more minutes higher than WASO\nmin =",
                 min(diff),", max =",max(diff))) 
